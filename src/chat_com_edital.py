@@ -84,8 +84,20 @@ def chat_com_edital_page():
         with tab2:
             st.write("Os arquivos gerados aparecerão aqui")
 
-    # Chat messages container
-    messages_container = st.container()
+    # Welcome message (only shown when no messages exist)
+    if not st.session_state.messages:
+        with st.chat_message("assistant"):
+            st.write(
+                "👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar você a analisar documentos de licitação."
+            )
+            st.write(
+                "Comece fazendo upload de um documento ou selecionando um edital da lista."
+            )
+
+    # Display chat history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
     # Chat input - Will be automatically pinned to bottom
     if prompt := st.chat_input("Converse com o assistente..."):
@@ -95,9 +107,7 @@ def chat_com_edital_page():
         # Get assistant response
         with st.spinner("Pensando..."):
             try:
-                message_placeholder = st.empty()
                 full_response = []
-
                 for response_chunk in chat_with_doc(st.session_state.doc_id, prompt):
                     if response_chunk:
                         full_response.append(response_chunk)
@@ -114,28 +124,13 @@ def chat_com_edital_page():
                             "content": "❌ Nenhuma resposta recebida do assistente",
                         }
                     )
+                st.rerun()
 
             except Exception as e:
                 error_msg = f"❌ Erro: {str(e)}"
                 st.session_state.messages.append(
                     {"role": "assistant", "content": error_msg}
                 )
-
-    # Display all messages in the container
-    with messages_container:
-        # Welcome message (only shown when no messages exist)
-        if not st.session_state.messages:
-            with st.chat_message("assistant"):
-                st.write(
-                    "👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar você a analisar documentos de licitação."
-                )
-                st.write(
-                    "Comece fazendo upload de um documento ou selecionando um edital da lista."
-                )
-
-        # Display chat history
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
+                st.rerun()
 
     return True
