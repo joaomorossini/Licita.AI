@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "licita-ai"
+version = "0.1.0"
+description = "A Streamlit app for chatting with procurement documents using Dify"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+streamlit = "^1.29.0"
+pytest = "^7.4.3"
+requests = "^2.31.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+responses = "^0.24.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api" 

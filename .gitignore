@@ -1,0 +1,5 @@
+.env
+scratchpad.ipynb
+*pycache*
+*cache*
+
