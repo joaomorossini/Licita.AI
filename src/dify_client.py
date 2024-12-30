@@ -8,13 +8,29 @@ from typing import Optional, Generator
 import requests
 from requests.exceptions import RequestException
 
+#############################################
+# CRITICAL: Logging Configuration
+# DO NOT disable logging as it's essential for debugging
+#############################################
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+#############################################
+# CRITICAL: API Configuration
+# These values affect all API operations
+#############################################
+
 # Constants
 BASE_URL = os.getenv("DIFY_API_URL", "https://dify.cogmo.com.br/v1")
 DEFAULT_DATASET_ID = "87c98a6b-bb10-4eec-8992-0ec453751e58"
+
+# Validate base URL
+if not BASE_URL:
+    raise EnvironmentError("DIFY_API_URL environment variable not set")
+if not BASE_URL.startswith(("http://", "https://")):
+    raise EnvironmentError("DIFY_API_URL must start with http:// or https://")
 
 
 class DifyClientError(Exception):
@@ -50,6 +66,30 @@ def get_api_key(for_knowledge: bool = False) -> str:
         )
     logger.info(f"{key_name} loaded successfully")
     return api_key
+
+
+def validate_api_response(response: requests.Response, operation: str):
+    """Validate API response and provide detailed error information.
+
+    Args:
+        response: Response object from requests
+        operation: Description of the operation being performed
+
+    Raises:
+        DifyClientError: If the response indicates an error
+    """
+    if not response.ok:
+        error_msg = f"{operation} failed with status {response.status_code}"
+        try:
+            error_details = response.json()
+            if isinstance(error_details, dict):
+                error_msg += f": {error_details.get('message', 'Unknown error')}"
+        except json.JSONDecodeError:
+            error_msg += f": {response.text}"
+
+        logger.error(error_msg)
+        logger.error(f"Response headers: {dict(response.headers)}")
+        raise DifyClientError(error_msg)
 
 
 def log_request_info(method: str, url: str, **kwargs):
@@ -270,10 +310,10 @@ def chat_with_doc(doc_id: Optional[str], user_query: str) -> Generator[str, None
         log_request_info("POST", url, headers=headers, json=data)
 
         with requests.post(url, headers=headers, json=data, stream=True) as response:
+            # Validate initial response
             if not response.ok:
-                logger.error(f"Chat request failed with status {response.status_code}")
-                logger.error(f"Response content: {response.text}")
-                response.raise_for_status()
+                validate_api_response(response, "Chat request")
+                return
 
             # Process the stream
             for line in response.iter_lines():
@@ -309,6 +349,5 @@ def chat_with_doc(doc_id: Optional[str], user_query: str) -> Generator[str, None
     except RequestException as e:
         logger.error(f"Chat request failed: {str(e)}")
         if hasattr(e, "response") and e.response is not None:
-            logger.error(f"Response status: {e.response.status_code}")
-            logger.error(f"Response content: {e.response.text}")
+            validate_api_response(e.response, "Chat request")
         raise DifyClientError(f"Chat request failed: {str(e)}") from e
