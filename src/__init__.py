@@ -1,0 +1,1 @@
+"""Licita.AI application package."""
