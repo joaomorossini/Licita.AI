@@ -24,11 +24,31 @@ st.set_page_config(
     page_title="Licita.AI", layout="wide", initial_sidebar_state="expanded"
 )
 
+# st.markdown(
+#     """
+# <style>
+# .stMainBlockContainer {
+#     padding-top: 10px;
+#     padding-bottom: 10px;
+#     padding-left: 20px;
+#     padding-right: 20px;
+# }
+# </style>
+# """,
+#     unsafe_allow_html=True,
+# )
+
 st.markdown(
     """
 <style>
+[data-testid="stTabsContent"] {
+    visibility: visible !important;
+}
+[data-testid="stTabs"] {
+    visibility: visible !important;
+}
 .stMainBlockContainer {
-    padding-top: 10px;
+    padding-top: 30px;
     padding-bottom: 10px;
     padding-left: 20px;
     padding-right: 20px;
@@ -46,11 +66,10 @@ def app_function():
     tab1, tab2 = st.tabs(["Chat com Edital", "Boletins"])
 
     with tab1:
-        return chat_com_edital_page()
+        chat_com_edital_page()
 
     with tab2:
-        st.sidebar.hide()  # Hide sidebar in Boletins tab
-        return boletins_page()
+        boletins_page()
 
 
 if __name__ == "__main__":

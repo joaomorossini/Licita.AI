@@ -45,7 +45,7 @@ def chat_com_edital_page():
     st.title("💬 Assistente de Licitações")
 
     with st.container():
-        with st.container(height=300, border=True):
+        with st.container(height=280, border=True):
             # Welcome message (only shown when no messages exist)
             if not st.session_state.messages:
                 with st.chat_message("assistant"):

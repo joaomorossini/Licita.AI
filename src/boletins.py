@@ -4,46 +4,13 @@ import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
 
-# Add custom CSS for dynamic layout
-CUSTOM_CSS = """
-<style>
-    /* Remove default padding and margins */
-    .block-container {
-        padding-top: 0rem;
-        padding-bottom: 0rem;
-        padding-left: 5rem;
-        padding-right: 5rem;
-    }
-    
-    /* Style for the table container */
-    .table-container {
-        height: calc(100vh - 200px);
-        overflow-y: auto;
-        margin-top: 1rem;
-    }
-
-    /* Style for the filters section */
-    .filters-container {
-        background-color: #262730;
-        padding: 1rem;
-        border-radius: 5px;
-        margin-bottom: 1rem;
-    }
-</style>
-"""
-
 
 def boletins_page():
-    """Display the Boletins page with filters and classification results.
-
-    Returns:
-        bool: True if the page loads successfully
-    """
-    # Inject custom CSS
-    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    """Display the Boletins page with filters and classification results."""
+    # Clear the sidebar for this tab
+    st.sidebar.empty()
 
     # Filters section at the top
-    st.markdown('<div class="filters-container">', unsafe_allow_html=True)
     st.subheader("Filtros")
 
     # Date filters in columns
@@ -62,7 +29,6 @@ def boletins_page():
             value=datetime.now().date(),
             max_value=datetime.now().date(),
         )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # Results table
     st.subheader("Resultados")
@@ -98,9 +64,6 @@ def boletins_page():
 
     # Convert to DataFrame for better display
     df = pd.DataFrame(data)
-
-    # Create a container for the scrollable table
-    st.markdown('<div class="table-container">', unsafe_allow_html=True)
 
     # Display the table with custom styling
     st.dataframe(
@@ -146,7 +109,5 @@ def boletins_page():
             ),
         },
     )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     return True
