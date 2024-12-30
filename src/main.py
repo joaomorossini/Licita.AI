@@ -24,6 +24,20 @@ st.set_page_config(
     page_title="Licita.AI", layout="wide", initial_sidebar_state="expanded"
 )
 
+st.markdown(
+    """
+<style>
+.stMainBlockContainer {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 
 def app_function():
     """Display the main application with navigation between pages."""

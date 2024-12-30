@@ -97,43 +97,45 @@ def chat_com_edital_page():
                     )
                     st.rerun()
 
-    # Document handling section
-    doc_container = st.container()
-    with doc_container:
-        # File upload section
-        uploaded_file = st.file_uploader(
-            "Enviar Documento",
-            type=SUPPORTED_TYPES,
-            help=f"Formatos suportados: {', '.join(SUPPORTED_TYPES).upper()} • Tamanho máximo: {MAX_FILE_SIZE_MB}MB",
-        )
-
-        if uploaded_file and st.session_state.upload_status != uploaded_file.name:
-            file_size_mb = uploaded_file.size / (1024 * 1024)
-            if file_size_mb > MAX_FILE_SIZE_MB:
-                st.error(
-                    f"❌ Arquivo muito grande! Tamanho máximo é {MAX_FILE_SIZE_MB}MB. Seu arquivo tem {file_size_mb:.1f}MB"
-                )
-                return False
-
-            try:
-                with st.spinner("Enviando documento..."):
-                    doc_id = upload_knowledge_file(
-                        uploaded_file.getvalue(), uploaded_file.name
-                    )
-                    st.session_state.doc_id = doc_id
-                    st.session_state.upload_status = uploaded_file.name
-                    st.success("✅ Documento enviado com sucesso!")
-                    st.info(
-                        "⏳ O documento está sendo processado. Você já pode começar a fazer perguntas enquanto ele é analisado."
-                    )
-            except Exception as e:
-                st.error(f"❌ Erro ao enviar documento: {str(e)}")
-                return False
-
         # Input/Output Files tabs
         tab1, tab2 = st.tabs(["Arquivos de Entrada", "Arquivos de Saída"])
         with tab1:
-            st.write("Os arquivos de entrada serão listados aqui")
+            # Document handling section
+            doc_container = st.container()
+            with doc_container:
+                # File upload section
+                uploaded_file = st.file_uploader(
+                    "Enviar Documento",
+                    type=SUPPORTED_TYPES,
+                    help=f"Formatos suportados: {', '.join(SUPPORTED_TYPES).upper()} • Tamanho máximo: {MAX_FILE_SIZE_MB}MB",
+                )
+
+                if (
+                    uploaded_file
+                    and st.session_state.upload_status != uploaded_file.name
+                ):
+                    file_size_mb = uploaded_file.size / (1024 * 1024)
+                    if file_size_mb > MAX_FILE_SIZE_MB:
+                        st.error(
+                            f"❌ Arquivo muito grande! Tamanho máximo é {MAX_FILE_SIZE_MB}MB. Seu arquivo tem {file_size_mb:.1f}MB"
+                        )
+                        return False
+
+                    try:
+                        with st.spinner("Enviando documento..."):
+                            doc_id = upload_knowledge_file(
+                                uploaded_file.getvalue(), uploaded_file.name
+                            )
+                            st.session_state.doc_id = doc_id
+                            st.session_state.upload_status = uploaded_file.name
+                            st.success("✅ Documento enviado com sucesso!")
+                            st.info(
+                                "⏳ O documento está sendo processado. Você já pode começar a fazer perguntas enquanto ele é analisado."
+                            )
+                    except Exception as e:
+                        st.error(f"❌ Erro ao enviar documento: {str(e)}")
+                        return False
+            # st.write("Os arquivos de entrada serão listados aqui")
         with tab2:
             st.write("Os arquivos gerados aparecerão aqui")
 
