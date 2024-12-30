@@ -170,11 +170,17 @@ def upload_pdf(
         headers = {"Authorization": f"Bearer {get_api_key(for_knowledge=True)}"}
         log_request_info("POST", url, headers=headers, files=files)
 
+        # Add debug logging for request details
+        logger.info(f"Request URL: {url}")
+        logger.info(f"Request data structure: {json.dumps(data, indent=2)}")
+        logger.info(f"File size: {len(file_bytes)} bytes")
+
         response = requests.post(url, headers=headers, files=files)
 
         if not response.ok:
             logger.error(f"Upload failed with status {response.status_code}")
             logger.error(f"Response content: {response.text}")
+            logger.error(f"Response headers: {dict(response.headers)}")
             response.raise_for_status()
 
         result = response.json()
@@ -187,6 +193,9 @@ def upload_pdf(
         if hasattr(e, "response") and e.response is not None:
             logger.error(f"Response status: {e.response.status_code}")
             logger.error(f"Response content: {e.response.text}")
+            logger.error(
+                f"Response headers: {dict(e.response.headers) if e.response.headers else 'No headers'}"
+            )
         raise DifyClientError(f"Failed to upload PDF: {str(e)}") from e
 
 
