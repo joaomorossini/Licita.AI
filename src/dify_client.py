@@ -121,13 +121,38 @@ def create_dataset(name: str, description: str = "Documents for Licita.AI") -> s
         raise DifyClientError(f"Failed to create dataset: {str(e)}") from e
 
 
-def upload_pdf(
-    file_bytes: bytes, filename: str, dataset_id: Optional[str] = None
-) -> str:
-    """Upload a PDF file to Dify knowledge base.
+def get_mime_type(filename: str) -> str:
+    """Get the MIME type for a file based on its extension.
 
     Args:
-        file_bytes: The PDF file content as bytes
+        filename: Name of the file
+
+    Returns:
+        str: MIME type for the file
+    """
+    extension = filename.lower().split(".")[-1]
+    mime_types = {
+        "txt": "text/plain",
+        "md": "text/markdown",
+        "markdown": "text/markdown",
+        "pdf": "application/pdf",
+        "html": "text/html",
+        "htm": "text/html",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "xls": "application/vnd.ms-excel",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "csv": "text/csv",
+    }
+    return mime_types.get(extension, "application/octet-stream")
+
+
+def upload_knowledge_file(
+    file_bytes: bytes, filename: str, dataset_id: Optional[str] = None
+) -> str:
+    """Upload a file to Dify knowledge base.
+
+    Args:
+        file_bytes: The file content as bytes
         filename: The name of the file being uploaded
         dataset_id: Optional dataset ID to use. If not provided, uses the default dataset.
 
@@ -144,6 +169,10 @@ def upload_pdf(
 
         # Create document in the dataset
         url = f"{BASE_URL}/datasets/{dataset_id}/document/create-by-file"
+
+        # Get the appropriate MIME type
+        mime_type = get_mime_type(filename)
+        logger.info(f"Using MIME type: {mime_type} for file: {filename}")
 
         # Prepare the processing rules
         data = {
@@ -163,7 +192,7 @@ def upload_pdf(
 
         # Convert data dict to string and create form data
         files = {
-            "file": (filename, file_bytes, "application/pdf"),
+            "file": (filename, file_bytes, mime_type),
             "data": (None, json.dumps(data), "text/plain"),
         }
 
@@ -185,18 +214,18 @@ def upload_pdf(
 
         result = response.json()
         doc_id = result["document"]["id"]
-        logger.info(f"PDF uploaded successfully. Document ID: {doc_id}")
+        logger.info(f"Document uploaded successfully. Document ID: {doc_id}")
         return doc_id
 
     except RequestException as e:
-        logger.error(f"Failed to upload PDF: {str(e)}")
+        logger.error(f"Failed to upload document: {str(e)}")
         if hasattr(e, "response") and e.response is not None:
             logger.error(f"Response status: {e.response.status_code}")
             logger.error(f"Response content: {e.response.text}")
             logger.error(
                 f"Response headers: {dict(e.response.headers) if e.response.headers else 'No headers'}"
             )
-        raise DifyClientError(f"Failed to upload PDF: {str(e)}") from e
+        raise DifyClientError(f"Failed to upload document: {str(e)}") from e
 
 
 def chat_with_doc(doc_id: Optional[str], user_query: str) -> Generator[str, None, None]:

@@ -1,11 +1,33 @@
 """Chat com Edital interface module."""
 
 import streamlit as st
-from src.dify_client import upload_pdf, chat_with_doc
+from src.dify_client import upload_knowledge_file, chat_with_doc
+
+# Define supported file types
+SUPPORTED_TYPES = [
+    "txt",
+    "md",
+    "markdown",
+    "pdf",
+    "html",
+    "htm",
+    "xlsx",
+    "xls",
+    "docx",
+    "csv",
+]
+MAX_FILE_SIZE_MB = 15
+
+# Configure page
+st.set_page_config(
+    page_title="Chat com Edital",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 
 def chat_com_edital_page():
-    """Display the Chat com Edital page with PDF upload and chat functionality.
+    """Display the Chat com Edital page with file upload and chat functionality.
 
     Returns:
         bool: True if the page loads successfully
@@ -23,20 +45,34 @@ def chat_com_edital_page():
         st.session_state.upload_status = None
 
     # File upload section with spinner and error handling
-    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+    uploaded_file = st.file_uploader(
+        label="Upload Document",
+        help=f"Supported formats: {', '.join(SUPPORTED_TYPES).upper()} • Max size: {MAX_FILE_SIZE_MB}MB",
+        type=SUPPORTED_TYPES,
+    )
 
     if (
         uploaded_file is not None
         and st.session_state.upload_status != uploaded_file.name
     ):
+        # Check file size
+        file_size_mb = uploaded_file.size / (1024 * 1024)  # Convert to MB
+        if file_size_mb > MAX_FILE_SIZE_MB:
+            st.error(
+                f"❌ File too large! Maximum size is {MAX_FILE_SIZE_MB}MB. Your file is {file_size_mb:.1f}MB"
+            )
+            return False
+
         try:
             with st.spinner("Uploading document..."):
                 # Upload file to Dify
-                doc_id = upload_pdf(uploaded_file.getvalue(), uploaded_file.name)
+                doc_id = upload_knowledge_file(
+                    uploaded_file.getvalue(), uploaded_file.name
+                )
                 st.session_state.doc_id = doc_id
                 st.session_state.upload_status = uploaded_file.name
 
-                st.success(f"✅ PDF uploaded successfully! Document ID: {doc_id}")
+                st.success(f"✅ Document uploaded successfully! Document ID: {doc_id}")
                 st.info(
                     "⏳ The document is being processed. You can start chatting while it's being analyzed."
                 )

@@ -4,7 +4,7 @@ import os
 import pytest
 import responses
 from src.dify_client import (
-    upload_pdf,
+    upload_knowledge_file,
     chat_with_doc,
     create_dataset,
     BASE_URL,
@@ -76,7 +76,7 @@ def test_create_dataset(mock_responses):
 
 def test_upload_pdf_to_dify(mock_responses):
     """Test that upload_pdf makes correct API call and returns document ID."""
-    doc_id = upload_pdf(b"fake_pdf_data", "test.pdf")
+    doc_id = upload_knowledge_file(b"fake_pdf_data", "test.pdf")
     assert doc_id == "mock_doc_id"
 
     # Verify the API was called correctly
@@ -109,4 +109,4 @@ def test_missing_api_key(monkeypatch):
     with pytest.raises(
         Exception, match="DIFY_KNOWLEDGE_API_KEY environment variable not set"
     ):
-        upload_pdf(b"fake_pdf_data", "test.pdf")
+        upload_knowledge_file(b"fake_pdf_data", "test.pdf")
