@@ -44,56 +44,60 @@ def chat_com_edital_page():
     # Main content area
     st.title("💬 Assistente de Licitações")
 
-    # Welcome message (only shown when no messages exist)
-    if not st.session_state.messages:
-        with st.chat_message("assistant"):
-            st.write(
-                "👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar você a analisar documentos de licitação."
-            )
-            st.write(
-                "Comece fazendo upload de um documento ou selecionando um edital da lista."
-            )
-
-    # Display chat history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-
-    # Chat input - Will be automatically pinned to bottom
-    if prompt := st.chat_input("Converse com o assistente..."):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        # Get assistant response
-        with st.spinner("Pensando..."):
-            try:
-                full_response = []
-                for response_chunk in chat_with_doc(st.session_state.doc_id, prompt):
-                    if response_chunk:
-                        full_response.append(response_chunk)
-
-                final_response = "".join(full_response)
-                if final_response:
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": final_response}
+    with st.container():
+        with st.container(height=300, border=True):
+            # Welcome message (only shown when no messages exist)
+            if not st.session_state.messages:
+                with st.chat_message("assistant"):
+                    st.write(
+                        "👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar você a analisar documentos de licitação."
                     )
-                else:
-                    st.session_state.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": "❌ Nenhuma resposta recebida do assistente",
-                        }
+                    st.write(
+                        "Comece fazendo upload de um documento ou selecionando um edital da lista."
                     )
-                st.rerun()
 
-            except Exception as e:
-                error_msg = f"❌ Erro: {str(e)}"
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg}
-                )
-                st.rerun()
+            # Display chat history
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.write(message["content"])
 
-        # Document handling section
+        # Chat input - Will be automatically pinned to bottom
+        if prompt := st.chat_input("Converse com o assistente..."):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+
+            # Get assistant response
+            with st.spinner("Pensando..."):
+                try:
+                    full_response = []
+                    for response_chunk in chat_with_doc(
+                        st.session_state.doc_id, prompt
+                    ):
+                        if response_chunk:
+                            full_response.append(response_chunk)
+
+                    final_response = "".join(full_response)
+                    if final_response:
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": final_response}
+                        )
+                    else:
+                        st.session_state.messages.append(
+                            {
+                                "role": "assistant",
+                                "content": "❌ Nenhuma resposta recebida do assistente",
+                            }
+                        )
+                    st.rerun()
+
+                except Exception as e:
+                    error_msg = f"❌ Erro: {str(e)}"
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": error_msg}
+                    )
+                    st.rerun()
+
+    # Document handling section
     doc_container = st.container()
     with doc_container:
         # File upload section
