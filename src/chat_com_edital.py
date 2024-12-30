@@ -21,7 +21,6 @@ MAX_FILE_SIZE_MB = 15
 
 def chat_com_edital_page():
     """Display the Chat com Edital page with file upload and chat functionality."""
-
     # Initialize session state
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -30,14 +29,13 @@ def chat_com_edital_page():
     if "upload_status" not in st.session_state:
         st.session_state.upload_status = None
 
-    # Sidebar
+    # Sidebar with document list
     with st.sidebar:
         st.title("Licitações")
         if st.session_state.doc_id:
             st.success("Documento atual carregado")
             st.caption(f"ID do documento: {st.session_state.doc_id}")
 
-        # Example document list
         for i in range(7):
             st.write(f"Edital {chr(65 + i)}")
         st.write("...")
@@ -46,25 +44,9 @@ def chat_com_edital_page():
     # Main content area
     st.title("💬 Assistente de Licitações")
 
-    # Chat messages container
-    chat_container = st.container()
-
-    # File upload and I/O container
-    file_container = st.container()
-
-    # Display chat interface in the chat container
-    with chat_container:
-        # Welcome message (only shown when no messages exist)
-        if not st.session_state.messages:
-            st.info("👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar.")
-
-        # Display chat messages
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-    # Handle file upload and I/O in the file container
-    with file_container:
+    # Document handling section
+    doc_container = st.container()
+    with doc_container:
         # File upload section
         uploaded_file = st.file_uploader(
             "Enviar Documento",
@@ -102,25 +84,23 @@ def chat_com_edital_page():
         with tab2:
             st.write("Os arquivos gerados aparecerão aqui")
 
-    # Chat input - This should be the last element
+    # Chat messages container
+    messages_container = st.container()
+
+    # Chat input - Will be automatically pinned to bottom
     if prompt := st.chat_input("Converse com o assistente..."):
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Get and display assistant response
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            full_response = []
-
+        # Get assistant response
+        with st.spinner("Pensando..."):
             try:
+                message_placeholder = st.empty()
+                full_response = []
+
                 for response_chunk in chat_with_doc(st.session_state.doc_id, prompt):
                     if response_chunk:
                         full_response.append(response_chunk)
-                        message_placeholder.markdown("".join(full_response))
 
                 final_response = "".join(full_response)
                 if final_response:
@@ -128,16 +108,34 @@ def chat_com_edital_page():
                         {"role": "assistant", "content": final_response}
                     )
                 else:
-                    message_placeholder.error(
-                        "❌ Nenhuma resposta recebida do assistente"
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "❌ Nenhuma resposta recebida do assistente",
+                        }
                     )
 
             except Exception as e:
                 error_msg = f"❌ Erro: {str(e)}"
-                message_placeholder.error(error_msg)
                 st.session_state.messages.append(
                     {"role": "assistant", "content": error_msg}
                 )
-                st.error(f"Erro detalhado: {str(e)}")
+
+    # Display all messages in the container
+    with messages_container:
+        # Welcome message (only shown when no messages exist)
+        if not st.session_state.messages:
+            with st.chat_message("assistant"):
+                st.write(
+                    "👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar você a analisar documentos de licitação."
+                )
+                st.write(
+                    "Comece fazendo upload de um documento ou selecionando um edital da lista."
+                )
+
+        # Display chat history
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
 
     return True
