@@ -89,16 +89,11 @@ with st.sidebar:
 
 # Main content area
 with st.container():
-    with st.container(height=280, border=True):
+    with st.container(height=450, border=True):
         # Welcome message (only shown when no messages exist)
         if not st.session_state.messages:
             with st.chat_message("assistant"):
-                st.write(
-                    "👋 Olá! Sou seu assistente de IA. Estou aqui para ajudar você a analisar documentos de licitação."
-                )
-                st.write(
-                    "Comece fazendo upload de um documento ou selecionando um edital da lista."
-                )
+                st.write("👋 Olá! Sou seu assistente de IA")
 
         # Display chat history
         for message in st.session_state.messages:

@@ -51,8 +51,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Boletins 📰")
-st.markdown("Acompanhe os boletins de licitação mais recentes.")
+st.title("Boletins de Oportunidades 📰")
 
 # Date filters at the top
 st.markdown('<div class="date-filters">', unsafe_allow_html=True)
