@@ -1,7 +1,16 @@
-"""Chat com Edital page."""
-
+import os
+import requests
 import streamlit as st
-from src.dify_client import upload_knowledge_file, chat_with_doc
+from dotenv import load_dotenv
+import json
+
+from src.dify_client import upload_knowledge_file
+
+load_dotenv()
+
+dify_api_key = os.getenv("DIFY_API_KEY")
+
+url = "http://dify.cogmo.com.br/v1/chat-messages"
 
 # Configure page
 st.set_page_config(
@@ -17,7 +26,7 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1rem;
+            padding-top: 1.5rem;
             padding-bottom: 0rem;
         }
         section[data-testid="stSidebar"] {
@@ -30,8 +39,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-st.title("💬 Assistente de Licitações")
 
 # Define supported file types
 SUPPORTED_TYPES = [
@@ -49,6 +56,8 @@ SUPPORTED_TYPES = [
 MAX_FILE_SIZE_MB = 15
 
 # Initialize session state
+if "conversation_id" not in st.session_state:
+    st.session_state.conversation_id = ""
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "doc_id" not in st.session_state:
@@ -58,7 +67,7 @@ if "upload_status" not in st.session_state:
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
 
-# Sidebar with document list
+# Sidebar
 with st.sidebar:
     # Add search box after navigation
     search = st.text_input(
@@ -87,72 +96,74 @@ with st.sidebar:
         for edital in editais:
             st.write(edital)
 
-# Main content area
-with st.container():
-    with st.container(height=450, border=True):
-        # Welcome message (only shown when no messages exist)
-        if not st.session_state.messages:
-            with st.chat_message("assistant"):
-                st.write("👋 Olá! Sou seu assistente de IA")
 
-        # Display chat history
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+st.title("💬 Assistente de Licitações")
 
-    # Chat input - Will be automatically pinned to bottom
-    if prompt := st.chat_input("Converse com o assistente..."):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-        # Display updated chat history immediately
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+prompt = st.chat_input("Enter you question")
 
-        # Get assistant response
-        with st.chat_message("assistant"):
-            with st.spinner("Pensando..."):
-                try:
-                    response_placeholder = st.empty()
-                    full_response = []
+if prompt:
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-                    # Stream the response
-                    for response_chunk in chat_with_doc(
-                        st.session_state.doc_id, prompt
-                    ):
-                        if response_chunk:
-                            full_response.append(response_chunk)
-                            # Display intermediate response
-                            response_placeholder.markdown("".join(full_response) + "▌")
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
 
-                    # Display final response
-                    final_response = "".join(full_response)
-                    if final_response:
-                        response_placeholder.markdown(final_response)
-                        # Add to message history
-                        st.session_state.messages.append(
-                            {"role": "assistant", "content": final_response}
-                        )
-                    else:
-                        response_placeholder.markdown(
-                            "❌ Nenhuma resposta recebida do assistente"
-                        )
-                        st.session_state.messages.append(
-                            {
-                                "role": "assistant",
-                                "content": "❌ Nenhuma resposta recebida do assistente",
-                            }
-                        )
+        headers = {
+            "Authorization": f"Bearer {dify_api_key}",
+            "Content-Type": "application/json",
+        }
 
-                except Exception as e:
-                    error_msg = f"❌ Erro: {str(e)}"
-                    response_placeholder.markdown(error_msg)
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": error_msg}
-                    )
+        payload = {
+            "inputs": {},
+            "query": prompt,
+            "response_mode": "streaming",
+            "conversation_id": st.session_state.conversation_id,
+            "user": "aianytime",
+            "files": [],
+        }
 
-        st.rerun()
+        try:
+            with requests.post(
+                url, headers=headers, json=payload, stream=True
+            ) as response:
+                response.raise_for_status()
+                full_response = ""
+
+                for line in response.iter_lines():
+                    if line:
+                        line = line.decode("utf-8")
+                        if line.startswith("data: "):
+                            try:
+                                event_data = json.loads(
+                                    line[6:]
+                                )  # Skip 'data: ' prefix
+                                if event_data.get("event") == "agent_message":
+                                    message_content = event_data.get("answer", "")
+                                    if message_content:
+                                        full_response += message_content
+                                        message_placeholder.markdown(full_response)
+                                elif event_data.get("event") == "message_end":
+                                    st.session_state.conversation_id = event_data.get(
+                                        "conversation_id",
+                                        st.session_state.conversation_id,
+                                    )
+                            except json.JSONDecodeError:
+                                continue
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Request error: {str(e)}")
+            full_response = "An error occurred while making the request."
+
+        message_placeholder.markdown(full_response)
+        if full_response:  # Only append if we got a response
+            st.session_state.messages.append(
+                {"role": "assistant", "content": full_response}
+            )
 
     # Document handling section
     doc_container = st.container()

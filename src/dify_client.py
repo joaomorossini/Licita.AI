@@ -270,14 +270,17 @@ def upload_knowledge_file(
 
 def stream_dify_response(doc_id: str, prompt: str):
     """
-    Get response from Dify API in blocking mode.
+    Get streaming response from Dify API.
 
     Args:
         doc_id (str): The conversation/document ID
         prompt (str): The user's input message
 
-    Returns:
-        dict: The response data from Dify
+    Yields:
+        tuple: A tuple containing (message_content, conversation_id, is_end)
+            - message_content (str): The content chunk from the response
+            - conversation_id (str): Updated conversation ID (only on message_end event)
+            - is_end (bool): Whether this is the final message chunk
     """
     headers = {
         "Authorization": f"Bearer {get_api_key()}",
@@ -293,6 +296,30 @@ def stream_dify_response(doc_id: str, prompt: str):
         "files": [],
     }
 
-    response = requests.post(f"{BASE_URL}/chat-messages", headers=headers, json=payload)
-    response.raise_for_status()
-    return response.json()
+    with requests.post(
+        f"{BASE_URL}/chat-messages", headers=headers, json=payload, stream=True
+    ) as response:
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+
+            line = line.decode("utf-8")
+            if not line.startswith("data: "):
+                continue
+
+            try:
+                event_data = json.loads(line[6:])  # Skip 'data: ' prefix
+
+                if event_data.get("event") == "agent_message":
+                    message_content = event_data.get("answer", "")
+                    if message_content:
+                        yield message_content, None, False
+
+                elif event_data.get("event") == "message_end":
+                    conversation_id = event_data.get("conversation_id", doc_id)
+                    yield "", conversation_id, True
+
+            except json.JSONDecodeError:
+                continue
