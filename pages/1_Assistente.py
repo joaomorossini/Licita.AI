@@ -98,41 +98,61 @@ with st.container():
         # Display chat history
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
-                st.write(message["content"])
+                st.markdown(message["content"])
 
     # Chat input - Will be automatically pinned to bottom
     if prompt := st.chat_input("Converse com o assistente..."):
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
+        # Display updated chat history immediately
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
         # Get assistant response
-        with st.spinner("Pensando..."):
-            try:
-                full_response = []
-                for response_chunk in chat_with_doc(st.session_state.doc_id, prompt):
-                    if response_chunk:
-                        full_response.append(response_chunk)
+        with st.chat_message("assistant"):
+            with st.spinner("Pensando..."):
+                try:
+                    response_placeholder = st.empty()
+                    full_response = []
 
-                final_response = "".join(full_response)
-                if final_response:
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": final_response}
-                    )
-                else:
-                    st.session_state.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": "❌ Nenhuma resposta recebida do assistente",
-                        }
-                    )
-                st.rerun()
+                    # Stream the response
+                    for response_chunk in chat_with_doc(
+                        st.session_state.doc_id, prompt
+                    ):
+                        if response_chunk:
+                            full_response.append(response_chunk)
+                            # Display intermediate response
+                            response_placeholder.markdown("".join(full_response) + "▌")
 
-            except Exception as e:
-                error_msg = f"❌ Erro: {str(e)}"
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg}
-                )
-                st.rerun()
+                    # Display final response
+                    final_response = "".join(full_response)
+                    if final_response:
+                        response_placeholder.markdown(final_response)
+                        # Add to message history
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": final_response}
+                        )
+                    else:
+                        response_placeholder.markdown(
+                            "❌ Nenhuma resposta recebida do assistente"
+                        )
+                        st.session_state.messages.append(
+                            {
+                                "role": "assistant",
+                                "content": "❌ Nenhuma resposta recebida do assistente",
+                            }
+                        )
+
+                except Exception as e:
+                    error_msg = f"❌ Erro: {str(e)}"
+                    response_placeholder.markdown(error_msg)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": error_msg}
+                    )
+
+        st.rerun()
 
     # Document handling section
     doc_container = st.container()

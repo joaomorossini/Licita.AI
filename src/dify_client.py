@@ -268,86 +268,31 @@ def upload_knowledge_file(
         raise DifyClientError(f"Failed to upload document: {str(e)}") from e
 
 
-def chat_with_doc(doc_id: Optional[str], user_query: str) -> Generator[str, None, None]:
-    """Chat with the document using Dify.
+def stream_dify_response(doc_id: str, prompt: str):
+    """
+    Get response from Dify API in blocking mode.
 
     Args:
-        doc_id: The document ID from Dify (optional)
-        user_query: The user's question about the document
+        doc_id (str): The conversation/document ID
+        prompt (str): The user's input message
 
-    Yields:
-        str: Chunks of the response as they arrive
-
-    Raises:
-        DifyClientError: If the chat request fails
+    Returns:
+        dict: The response data from Dify
     """
-    try:
-        logger.info(
-            f"Sending chat query{' for document ' + doc_id if doc_id else ''}..."
-        )
+    headers = {
+        "Authorization": f"Bearer {get_api_key()}",
+        "Content-Type": "application/json",
+    }
 
-        # Send message to the application
-        url = f"{BASE_URL}/chat-messages"
+    payload = {
+        "inputs": {},
+        "query": prompt,
+        "response_mode": "streaming",
+        "conversation_id": doc_id,
+        "user": "user",
+        "files": [],
+    }
 
-        # Base request data following official API documentation
-        data = {
-            "query": user_query,  # Required: User input/question content
-            "inputs": {},  # Optional: Variables defined by the app
-            "response_mode": "streaming",  # Use streaming for real-time responses
-            "user": "default_user",  # User identifier for analytics
-            "auto_generate_name": True,  # Auto-generate conversation title
-        }
-
-        # Only include files if we have a document ID
-        if doc_id:
-            data["files"] = [{"id": doc_id, "type": "pdf"}]
-
-        headers = {
-            "Authorization": f"Bearer {get_api_key()}",
-            "Content-Type": "application/json",
-        }
-
-        log_request_info("POST", url, headers=headers, json=data)
-
-        with requests.post(url, headers=headers, json=data, stream=True) as response:
-            # Validate initial response
-            if not response.ok:
-                validate_api_response(response, "Chat request")
-                return
-
-            # Process the stream
-            for line in response.iter_lines():
-                if line:
-                    line = line.decode("utf-8")
-                    if line.startswith("data: "):
-                        try:
-                            # Remove "data: " prefix and parse JSON
-                            json_str = line[6:]
-                            chunk_data = json.loads(json_str)
-
-                            # Extract the actual text from the response
-                            if "answer" in chunk_data:
-                                yield chunk_data["answer"]
-                            elif "text" in chunk_data:
-                                yield chunk_data["text"]
-                            elif "event" in chunk_data:
-                                if chunk_data["event"] == "error":
-                                    error_msg = chunk_data.get(
-                                        "message", "Unknown error"
-                                    )
-                                    logger.error(f"Stream error: {error_msg}")
-                                    yield f"❌ Error: {error_msg}"
-                                elif chunk_data["event"] == "message":
-                                    message = chunk_data.get("message", "")
-                                    if message:
-                                        yield message
-
-                        except json.JSONDecodeError as e:
-                            logger.error(f"Failed to parse chunk: {str(e)}")
-                            continue
-
-    except RequestException as e:
-        logger.error(f"Chat request failed: {str(e)}")
-        if hasattr(e, "response") and e.response is not None:
-            validate_api_response(e.response, "Chat request")
-        raise DifyClientError(f"Chat request failed: {str(e)}") from e
+    response = requests.post(f"{BASE_URL}/chat-messages", headers=headers, json=payload)
+    response.raise_for_status()
+    return response.json()
