@@ -5,10 +5,30 @@ from src.dify_client import upload_knowledge_file, chat_with_doc
 
 # Configure page
 st.set_page_config(
-    page_title="Assistente - Licita.AI",
+    page_title="Assistente de Licitações",
     page_icon="📄",
     layout="wide",
     initial_sidebar_state="expanded",
+    menu_items={"Get help": None, "Report a bug": None, "About": None},
+)
+
+# Remove top padding and reduce sidebar width
+st.markdown(
+    """
+    <style>
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 0rem;
+        }
+        section[data-testid="stSidebar"] {
+            width: 18rem !important;
+        }
+        section[data-testid="stSidebar"] > div {
+            width: 18rem;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.title("💬 Assistente de Licitações")
@@ -35,18 +55,37 @@ if "doc_id" not in st.session_state:
     st.session_state.doc_id = None
 if "upload_status" not in st.session_state:
     st.session_state.upload_status = None
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
 
 # Sidebar with document list
 with st.sidebar:
-    st.title("Licitações")
+    # Add search box after navigation
+    search = st.text_input(
+        "",
+        value=st.session_state.search_query,
+        placeholder="🔍 Buscar",
+    )
+    if search != st.session_state.search_query:
+        st.session_state.search_query = search
+    st.markdown("---")  # Second divider
+
+    st.title("Histórico")
     if st.session_state.doc_id:
         st.success("Documento atual carregado")
         st.caption(f"ID do documento: {st.session_state.doc_id}")
 
-    for i in range(7):
-        st.write(f"Edital {chr(65 + i)}")
-    st.write("...")
-    st.write("Edital Z")
+    # Filter editais based on search query
+    editais = [f"Licitação {chr(65 + i)}" for i in range(7)]
+
+    if search:
+        editais = [e for e in editais if search.lower() in e.lower()]
+
+    if not editais:
+        st.info("Nenhum edital encontrado")
+    else:
+        for edital in editais:
+            st.write(edital)
 
 # Main content area
 with st.container():
