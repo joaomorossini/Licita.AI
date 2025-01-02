@@ -275,11 +275,11 @@ class DifyClient:
                 )
             raise DifyClientError(f"Failed to upload document: {str(e)}") from e
 
-    def stream_dify_response(self, doc_id: str, prompt: str):
+    def stream_dify_response(self, conversation_id: str, prompt: str):
         """Get streaming response from Dify API.
 
         Args:
-            doc_id (str): The conversation/document ID
+            conversation_id (str): The conversation/document ID
             prompt (str): The user's input message
 
         Yields:
@@ -297,7 +297,7 @@ class DifyClient:
             "inputs": {},
             "query": prompt,
             "response_mode": "streaming",
-            "conversation_id": doc_id,
+            "conversation_id": conversation_id,
             "user": "user",
             "files": [],
         }
@@ -318,13 +318,15 @@ class DifyClient:
                 try:
                     event_data = json.loads(line[6:])  # Skip 'data: ' prefix
 
-                    if event_data.get("event") == "agent_message":
+                    if event_data.get("event") == "message":
                         message_content = event_data.get("answer", "")
                         if message_content:
                             yield message_content, None, False
 
                     elif event_data.get("event") == "message_end":
-                        conversation_id = event_data.get("conversation_id", doc_id)
+                        conversation_id = event_data.get(
+                            "conversation_id", conversation_id
+                        )
                         yield "", conversation_id, True
 
                 except json.JSONDecodeError:
