@@ -70,9 +70,10 @@ if "search_query" not in st.session_state:
 with st.sidebar:
     # Add search box after navigation
     search = st.text_input(
-        "",
+        "Buscar",
         value=st.session_state.search_query,
         placeholder="🔍 Buscar",
+        label_visibility="collapsed",
     )
     if search != st.session_state.search_query:
         st.session_state.search_query = search
