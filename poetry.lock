@@ -1149,23 +1149,6 @@ files = [
 ]
 
 [[package]]
-name = "st-multimodal-chatinput"
-version = "0.2.1"
-description = "Streamlit component that allows you to accept multi-modal inputs through a chat interface."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "st-multimodal-chatinput-0.2.1.tar.gz", hash = "sha256:fa8e02568e2bfd645ae3479e02933ba67a2b0db49063064ddb988cb9c2c697a4"},
-    {file = "st_multimodal_chatinput-0.2.1-py3-none-any.whl", hash = "sha256:d997a6f7d39d4aaadd4944f5ef853c7af6b20c7a7a8f601dbba3fa76c37a3fb4"},
-]
-
-[package.dependencies]
-streamlit = ">=0.63"
-
-[package.extras]
-devel = ["playwright (==1.36.0)", "pytest (==7.4.0)", "pytest-playwright-snapshot (==1.0)", "pytest-rerunfailures (==12.0)", "requests (==2.31.0)", "wheel"]
-
-[[package]]
 name = "streamlit"
 version = "1.41.1"
 description = "A faster way to build and share data apps"
@@ -1371,4 +1354,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<4.0"
-content-hash = "f65668759127cf68dded490a2d6ed3c90ef1f1cfb4c97f8ce1737b0848ebdaee"
+content-hash = "acb8801c0dee4b0afc8077bcd4ccd66a7fcb958cbd919aec02bb40b9fab4994e"
