@@ -329,3 +329,48 @@ class DifyClient:
 
                 except json.JSONDecodeError:
                     continue
+
+    def upload_file(self, file_path: str, user_id: str) -> dict:
+        """Upload a file to Dify for multimodal understanding.
+
+        Args:
+            file_path: The path to the file being uploaded
+            user_id: Unique identifier for the user
+
+        Returns:
+            dict: Information about the uploaded file
+
+        Raises:
+            DifyClientError: If the upload fails
+        """
+        try:
+            with open(file_path, "rb") as file:
+                file_bytes = file.read()
+
+            filename = os.path.basename(file_path)
+            url = f"{self.base_url}/files/upload"
+            mime_type = self._get_mime_type(filename)
+            files = {
+                "file": (filename, file_bytes, mime_type),
+                "user": (None, user_id),
+            }
+            headers = {
+                "Authorization": f"Bearer {self._get_api_key()}",
+            }
+            self._log_request_info("POST", url, headers=headers, files=files)
+
+            response = requests.post(url, headers=headers, files=files)
+            self._validate_api_response(response, "File upload")
+
+            return response.json()
+
+        except RequestException as e:
+            logger.error(f"Failed to upload file: {str(e)}")
+            if hasattr(e, "response") and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response content: {e.response.text}")
+            raise DifyClientError(f"Failed to upload file: {str(e)}") from e
+        except FileNotFoundError:
+            raise DifyClientError(f"File not found: {file_path}")
+        except Exception as e:
+            raise DifyClientError(f"An unexpected error occurred: {str(e)}")

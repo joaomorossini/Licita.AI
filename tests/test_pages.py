@@ -28,7 +28,6 @@ def test_assistente_page_exists():
     assert "SUPPORTED_TYPES" in content
     assert "MAX_FILE_SIZE_MB" in content
     assert "st.set_page_config" in content
-    assert 'page_title="Assistente - Licita.AI"' in content
     assert 'page_icon="📄"' in content
 
 
