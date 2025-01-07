@@ -18,8 +18,8 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1rem;
-            padding-bottom: 0rem;
+            padding-top: 1.2rem;
+            padding-bottom: 1rem;
         }
         section[data-testid="stSidebar"] {
             width: 18rem !important;
@@ -52,11 +52,13 @@ st.markdown(
 )
 
 st.title("Boletins de Oportunidades 📰")
+st.divider()
 
 # Date filters at the top
 st.markdown('<div class="date-filters">', unsafe_allow_html=True)
 date_cols = st.columns([1, 2, 0.5, 1, 2, 6])
 
+# TODO: Adicionar coluna "objeto"
 with date_cols[0]:
     st.markdown('<p class="date-label">De</p>', unsafe_allow_html=True)
 with date_cols[1]:

@@ -17,8 +17,8 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1rem;
-            padding-bottom: 0rem;
+            padding-top: 1.2rem;
+            padding-bottom: 1rem;
         }
         section[data-testid="stSidebar"] {
             width: 18rem !important;
@@ -33,6 +33,7 @@ st.markdown(
 
 st.title("Dashboard 📊")
 st.markdown("Visualize métricas e insights sobre licitações.")
+st.divider()
 
 # Sidebar filters
 with st.sidebar:
