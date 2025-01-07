@@ -31,8 +31,8 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1rem;
-            padding-bottom: 0rem;
+            padding-top: 1.2rem;
+            padding-bottom: 1rem;
         }
         section[data-testid="stSidebar"] {
             width: 18rem !important;
@@ -46,6 +46,7 @@ st.markdown(
 )
 
 st.title("Bem-vindo ao Licita.AI 🤖")
+st.divider()
 
 st.markdown(
     """
@@ -54,6 +55,7 @@ st.markdown(
 Navegue pelo menu lateral para acessar as diferentes funcionalidades:
 
 - **📄 Assistente**: Chat inteligente para análise de editais
+- **📋 Resumo**: Resumo de licitação
 - **📰 Boletins**: Acompanhamento de boletins de licitação
 - **📊 Dashboard**: Visualização de métricas e insights
 """

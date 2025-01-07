@@ -3,3 +3,6 @@ scratchpad.ipynb
 *pycache*
 *cache*
 template*
+temp/
+exemplos/
+.DS_Store
