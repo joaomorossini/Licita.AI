@@ -449,3 +449,33 @@ class DifyClient:
                 logger.error(f"Response status: {e.response.status_code}")
                 logger.error(f"Response content: {e.response.text}")
             raise DifyClientError(f"Failed to list dataset files: {str(e)}") from e
+
+    def delete_dataset(self, dataset_id: str) -> bool:
+        """Delete a dataset from Dify.
+
+        Args:
+            dataset_id: The ID of the dataset to delete
+
+        Returns:
+            bool: True if deletion was successful
+
+        Raises:
+            DifyClientError: If the deletion fails
+        """
+        try:
+            url = f"{self.base_url}/datasets/{dataset_id}"
+            headers = {
+                "Authorization": f"Bearer {self._get_api_key(for_knowledge=True)}"
+            }
+            self._log_request_info("DELETE", url, headers=headers)
+
+            response = requests.delete(url, headers=headers)
+            self._validate_api_response(response, "Delete dataset")
+            return True
+
+        except RequestException as e:
+            logger.error(f"Failed to delete dataset: {str(e)}")
+            if hasattr(e, "response") and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response content: {e.response.text}")
+            raise DifyClientError(f"Failed to delete dataset: {str(e)}") from e
