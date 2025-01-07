@@ -30,7 +30,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("💬 Assistente de Licitações")
+st.title("Assistente de Licitações 💬")
 st.divider()
 
 src = "https://udify.app/chat/pDAjmEFFaYQqHags"
@@ -54,5 +54,5 @@ components.html(
   {iframe_style}
   <iframe id="dify-iframe" src={src} allow="microphone"></iframe>
 """,
-    height=650,
+    height=640,
 )

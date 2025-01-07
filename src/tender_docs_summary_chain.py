@@ -197,14 +197,14 @@ class TenderDocsSummaryChain:
                 {requirements_list}
 
                 Formate sua resposta em markdown seguindo EXATAMENTE este modelo:
-                # Resumo Geral
+                ### Resumo Geral
                 - [Resumo detalhado das seções principais]
 
-                # Glossário
+                ### Glossário
                 - Termo 1: Definição
                 - Termo 2: Definição
 
-                # Checklist
+                ### Checklist
                 - [ ] [Requisito 1]
                 - [ ] [Requisito 2]
                 """

@@ -121,45 +121,37 @@ class DifyClient:
         if "files" in kwargs:
             logger.info("Files included in request")
 
-    def create_dataset(
-        self, name: str, description: str = "Documents for Licita.AI"
-    ) -> str:
+    def create_dataset(self, name: str) -> str:
         """Create a new dataset in Dify.
 
         Args:
-            name: Name for the new dataset
-            description: Description for the new dataset
+            name: The name of the dataset
 
         Returns:
-            str: The dataset ID from Dify
+            str: The ID of the created dataset
 
         Raises:
-            DifyClientError: If the dataset creation fails
+            DifyClientError: If the creation fails
         """
         try:
-            logger.info("Creating new dataset...")
             url = f"{self.base_url}/datasets"
             headers = {
                 "Authorization": f"Bearer {self._get_api_key(for_knowledge=True)}",
                 "Content-Type": "application/json",
             }
-
-            create_data = {
+            data = {
                 "name": name,
-                "description": description,
+                "description": f"Útil para buscar informações relevantes referentes à licitação: {name}",
                 "permission": "only_me",
                 "indexing_technique": "high_quality",
             }
+            self._log_request_info("POST", url, headers=headers, data=data)
 
-            response = requests.post(url, headers=headers, json=create_data)
-            if not response.ok:
-                logger.error(f"Failed to create dataset: {response.status_code}")
-                logger.error(f"Response content: {response.text}")
-                response.raise_for_status()
+            response = requests.post(url, headers=headers, json=data)
+            self._validate_api_response(response, "Create dataset")
 
-            dataset_id = response.json()["id"]
-            logger.info(f"Created dataset {name} with ID: {dataset_id}")
-            return dataset_id
+            dataset = response.json()
+            return dataset["id"]
 
         except RequestException as e:
             logger.error(f"Failed to create dataset: {str(e)}")
@@ -275,6 +267,51 @@ class DifyClient:
                 )
             raise DifyClientError(f"Failed to upload document: {str(e)}") from e
 
+    def upload_file(self, file_path: str, user_id: str) -> dict:
+        """Upload a file to Dify for multimodal understanding.
+
+        Args:
+            file_path: The path to the file being uploaded
+            user_id: Unique identifier for the user
+
+        Returns:
+            dict: Information about the uploaded file
+
+        Raises:
+            DifyClientError: If the upload fails
+        """
+        try:
+            with open(file_path, "rb") as file:
+                file_bytes = file.read()
+
+            filename = os.path.basename(file_path)
+            url = f"{self.base_url}/files/upload"
+            mime_type = self._get_mime_type(filename)
+            files = {
+                "file": (filename, file_bytes, mime_type),
+                "user": (None, user_id),
+            }
+            headers = {
+                "Authorization": f"Bearer {self._get_api_key()}",
+            }
+            self._log_request_info("POST", url, headers=headers, files=files)
+
+            response = requests.post(url, headers=headers, files=files)
+            self._validate_api_response(response, "File upload")
+
+            return response.json()
+
+        except RequestException as e:
+            logger.error(f"Failed to upload file: {str(e)}")
+            if hasattr(e, "response") and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response content: {e.response.text}")
+            raise DifyClientError(f"Failed to upload file: {str(e)}") from e
+        except FileNotFoundError:
+            raise DifyClientError(f"File not found: {file_path}")
+        except Exception as e:
+            raise DifyClientError(f"An unexpected error occurred: {str(e)}")
+
     def stream_dify_response(self, conversation_id: str, prompt: str):
         """Get streaming response from Dify API.
 
@@ -332,47 +369,83 @@ class DifyClient:
                 except json.JSONDecodeError:
                     continue
 
-    def upload_file(self, file_path: str, user_id: str) -> dict:
-        """Upload a file to Dify for multimodal understanding.
+    def fetch_all_datasets(self, page: int = 1, limit: int = 20) -> list:
+        """Fetch all datasets and return only id, name, and description.
 
         Args:
-            file_path: The path to the file being uploaded
-            user_id: Unique identifier for the user
+            page: Page number for pagination.
+            limit: Number of items per page.
 
         Returns:
-            dict: Information about the uploaded file
+            list: A list of dictionaries containing id, name, and description of each dataset.
 
         Raises:
-            DifyClientError: If the upload fails
+            DifyClientError: If the request fails.
         """
         try:
-            with open(file_path, "rb") as file:
-                file_bytes = file.read()
-
-            filename = os.path.basename(file_path)
-            url = f"{self.base_url}/files/upload"
-            mime_type = self._get_mime_type(filename)
-            files = {
-                "file": (filename, file_bytes, mime_type),
-                "user": (None, user_id),
-            }
+            url = f"{self.base_url}/datasets"
             headers = {
-                "Authorization": f"Bearer {self._get_api_key()}",
+                "Authorization": f"Bearer {self._get_api_key(for_knowledge=True)}",
+                "Content-Type": "application/json",
             }
-            self._log_request_info("POST", url, headers=headers, files=files)
+            params = {"page": page, "limit": limit}
+            self._log_request_info("GET", url, headers=headers, params=params)
 
-            response = requests.post(url, headers=headers, files=files)
-            self._validate_api_response(response, "File upload")
+            response = requests.get(url, headers=headers, params=params)
+            self._validate_api_response(response, "Fetch all datasets")
 
-            return response.json()
+            datasets = response.json().get("data", [])
+            filtered_datasets = [
+                {
+                    "id": dataset["id"],
+                    "name": dataset["name"],
+                    "description": dataset["description"],
+                }
+                for dataset in datasets
+            ]
+            return filtered_datasets
 
         except RequestException as e:
-            logger.error(f"Failed to upload file: {str(e)}")
+            logger.error(f"Failed to fetch datasets: {str(e)}")
             if hasattr(e, "response") and e.response is not None:
                 logger.error(f"Response status: {e.response.status_code}")
                 logger.error(f"Response content: {e.response.text}")
-            raise DifyClientError(f"Failed to upload file: {str(e)}") from e
-        except FileNotFoundError:
-            raise DifyClientError(f"File not found: {file_path}")
-        except Exception as e:
-            raise DifyClientError(f"An unexpected error occurred: {str(e)}")
+            raise DifyClientError(f"Failed to fetch datasets: {str(e)}") from e
+
+    def list_dataset_files(
+        self, dataset_id: str, page: int = 1, limit: int = 20
+    ) -> list:
+        """List all files (documents) in a specific dataset.
+
+        Args:
+            dataset_id: The ID of the dataset.
+            page: Page number for pagination.
+            limit: Number of items per page.
+
+        Returns:
+            list: A list of dictionaries containing information about each document.
+
+        Raises:
+            DifyClientError: If the request fails.
+        """
+        try:
+            url = f"{self.base_url}/datasets/{dataset_id}/documents"
+            headers = {
+                "Authorization": f"Bearer {self._get_api_key(for_knowledge=True)}",
+                "Content-Type": "application/json",
+            }
+            params = {"page": page, "limit": limit}
+            self._log_request_info("GET", url, headers=headers, params=params)
+
+            response = requests.get(url, headers=headers, params=params)
+            self._validate_api_response(response, "List dataset files")
+
+            documents = response.json().get("data", [])
+            return documents
+
+        except RequestException as e:
+            logger.error(f"Failed to list dataset files: {str(e)}")
+            if hasattr(e, "response") and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response content: {e.response.text}")
+            raise DifyClientError(f"Failed to list dataset files: {str(e)}") from e

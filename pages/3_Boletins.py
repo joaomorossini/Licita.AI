@@ -51,14 +51,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Boletins de Oportunidades 📰")
+st.title("Boletins de Oportunidades 📰💰")
 st.divider()
 
 # Date filters at the top
 st.markdown('<div class="date-filters">', unsafe_allow_html=True)
 date_cols = st.columns([1, 2, 0.5, 1, 2, 6])
 
-# TODO: Adicionar coluna "objeto"
 with date_cols[0]:
     st.markdown('<p class="date-label">De</p>', unsafe_allow_html=True)
 with date_cols[1]:
@@ -82,29 +81,31 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 # Filters in sidebar
 with st.sidebar:
-    st.title("Filtros")
+    # st.title("\U0001F5D1️ Filtros")
+    # st.markdown(
+    #     body="""
+    #         <h1 style="display: flex; align-items: center;">
+    #             <span style="font-size: 24px;">&#128269;</span>&nbsp;Filter
+    #         </h1>
+    #         """,
+    #     unsafe_allow_html=True,
+    # )
+
+    st.markdown(
+        """
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style="display: flex; align-items: center;">
+            Filtros&nbsp<span class="material-icons">filter_alt</span>
+        </h1>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Client filter
     st.subheader("Cliente")
     selected_clients = st.multiselect(
         "Selecione os clientes",
         ["Empresa A", "Empresa B", "Empresa C", "Empresa D", "Empresa E"],
-        default=[],
-    )
-
-    # Type filter
-    st.subheader("Tipo")
-    selected_types = st.multiselect(
-        "Selecione os tipos",
-        ["Licitação", "Pregão", "Concorrência"],
-        default=[],
-    )
-
-    # Size filter
-    st.subheader("Porte")
-    selected_sizes = st.multiselect(
-        "Selecione o porte",
-        ["Pequeno", "Médio", "Grande"],
         default=[],
     )
 
@@ -117,10 +118,10 @@ with st.sidebar:
         "Valor máximo", min_value=0, value=1000000, step=10000, format="%d"
     )
 
-    # Status filter
-    st.subheader("Status")
+    # 'Decisão' filter
+    st.subheader("Decisão")
     selected_status = st.multiselect(
-        "Selecione o status",
+        "Selecione as opções que deseja exibir",
         ["Participar", "Não Participar", "Em Análise"],
         default=[],
     )
@@ -144,8 +145,7 @@ data = {
         "2024-01-04",
         "2024-01-05",
     ],
-    "Tipo": ["Licitação", "Pregão", "Concorrência", "Licitação", "Pregão"],
-    "Porte": ["Pequeno", "Médio", "Grande", "Médio", "Pequeno"],
+    "Objeto": ["Objeto A", "Objeto B", "Objeto C", "Objeto D", "Objeto E"],
     "Valor Referência": [
         "R$ 100.000,00",
         "R$ 200.000,00",
@@ -168,10 +168,6 @@ df = pd.DataFrame(data)
 # Apply filters (if any)
 if selected_clients:
     df = df[df["Cliente"].isin(selected_clients)]
-if selected_types:
-    df = df[df["Tipo"].isin(selected_types)]
-if selected_sizes:
-    df = df[df["Porte"].isin(selected_sizes)]
 if selected_status:
     df = df[df["Decisão"].isin(selected_status)]
 
@@ -197,15 +193,10 @@ st.dataframe(
             format="DD/MM/YYYY",
             width="small",
         ),
-        "Tipo": st.column_config.TextColumn(
-            "Tipo",
-            help="Tipo do processo",
+        "Objeto": st.column_config.TextColumn(
+            "Objeto",
+            help="Descrição do objeto",
             width="medium",
-        ),
-        "Porte": st.column_config.TextColumn(
-            "Porte",
-            help="Porte da empresa",
-            width="small",
         ),
         "Valor Referência": st.column_config.TextColumn(
             "Valor Referência",

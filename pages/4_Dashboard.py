@@ -32,12 +32,19 @@ st.markdown(
 )
 
 st.title("Dashboard 📊")
-st.markdown("Visualize métricas e insights sobre licitações.")
 st.divider()
 
 # Sidebar filters
 with st.sidebar:
-    st.title("Filtros")
+    st.markdown(
+        """
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style="display: flex; align-items: center;">
+            Filtros&nbsp<span class="material-icons">filter_alt</span>
+        </h1>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Time range
     st.subheader("Período")
@@ -63,8 +70,6 @@ with st.sidebar:
             value=datetime.now().date(),
             max_value=datetime.now().date(),
         )
-
-    st.markdown("---")
 
     # View type
     st.subheader("Visualização")
@@ -93,7 +98,6 @@ with st.sidebar:
     )
 
     # Apply filters button
-    st.markdown("---")
     if st.button("Atualizar Dashboard", type="primary", use_container_width=True):
         st.rerun()
 

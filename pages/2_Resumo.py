@@ -57,53 +57,64 @@ if "tender_documents" not in st.session_state:
     st.session_state.tender_documents = None
 if "summary" not in st.session_state:
     st.session_state.summary = None
+if "docs_text" not in st.session_state:
+    st.session_state.docs_text = None
 
-st.title("📋 Resumo de Licitação")
+st.title("Resumo de Licitação 📋")
 st.divider()
 
-# with st.expander("Documentos da Licitação"):
-
-# File uploader
-uploaded_files = st.file_uploader(
-    "Faça upload dos documentos da licitação em formato PDF",
-    type=["pdf"],
-    accept_multiple_files=True,
-)
-
-if uploaded_files:
-    st.toast(
-        f"{len(uploaded_files)} arquivos recebidos para processamento",
-        icon="👍",
+# Sidebar - File Upload Section
+with st.sidebar:
+    st.markdown("### 📤 Upload de Arquivos")
+    uploaded_files = st.file_uploader(
+        "Faça upload dos documentos da licitação em formato PDF",
+        type=["pdf"],
+        accept_multiple_files=True,
     )
 
-    st.markdown("### 🔍 Pré-Visualização")
-    preview_container = st.container(height=350, border=True)
+    if uploaded_files:
+        st.success(f"{len(uploaded_files)} arquivo(s) recebido(s)")
 
-    try:
-        # Process PDFs and store in session state
-        st.session_state.tender_documents = utils.load_pdfs_to_docs(uploaded_files)
+        if st.button(
+            "🔄 Processar Documentos", type="primary", use_container_width=True
+        ):
+            with st.spinner("Processando documentos..."):
+                try:
+                    # Process PDFs and store in session state
+                    st.session_state.tender_documents = utils.load_pdfs_to_docs(
+                        uploaded_files
+                    )
+                    if st.session_state.tender_documents:
+                        # Convert documents to text
+                        st.session_state.docs_text = utils.concatenate_docs(
+                            st.session_state.tender_documents
+                        )
+                        st.toast("Documentos processados com sucesso!", icon="✅")
+                    else:
+                        st.error("Nenhum documento foi processado com sucesso.")
+                except Exception as e:
+                    st.error(f"Erro ao processar os documentos: {str(e)}")
 
-        if st.session_state.tender_documents:
-            # Convert documents to text
-            docs_text = utils.concatenate_docs(st.session_state.tender_documents)
-
-            # Display preview of the documents
-            with preview_container:
-                st.markdown(docs_text)
-
-            # Generate Summary button
-            if st.button("Gerar Resumo", type="primary"):
-                with st.spinner("Gerando resumo..."):
-                    st.session_state.summary = chain.generate_summary(docs_text)
-
-            # Display summary if available
-            if st.session_state.summary:
-                st.markdown("### 📄 Resumo")
-                st.markdown(st.session_state.summary)
+# Main content area
+# Preview section
+with st.expander("🔍 Pré-Visualização dos Documentos", expanded=True):
+    with st.container(height=400, border=True):
+        if st.session_state.get("docs_text"):
+            st.markdown(st.session_state.docs_text)
         else:
-            with preview_container:
-                st.markdown(
-                    "Faça upload dos documentos para carregar a pré-visualização."
-                )
-    except Exception as e:
-        st.error(f"Erro ao processar os documentos: {str(e)}")
+            st.info("👈 Faça upload dos documentos no painel lateral para começar.")
+
+# Summary section
+if st.button(
+    "📝 Gerar Resumo",
+    type="primary",
+    use_container_width=True,
+    disabled=not st.session_state.get("docs_text"),
+):
+    with st.spinner("Gerando resumo..."):
+        st.session_state.summary = chain.generate_summary(st.session_state.docs_text)
+        st.toast("Resumo gerado com sucesso!", icon="✅")
+
+if st.session_state.summary:
+    st.markdown("### 📄 Resumo")
+    st.markdown(st.session_state.summary)

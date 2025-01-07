@@ -45,18 +45,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Bem-vindo ao Licita.AI 🤖")
+st.title("Bem-vindo ao Licita.AI")
 st.divider()
 
 st.markdown(
     """
-### Seu assistente inteligente para licitações
+#### Inteligência Artificial aplicada a licitações
+
 
 Navegue pelo menu lateral para acessar as diferentes funcionalidades:
 
 - **📄 Assistente**: Chat inteligente para análise de editais
+
 - **📋 Resumo**: Resumo de licitação
+
 - **📰 Boletins**: Acompanhamento de boletins de licitação
+
 - **📊 Dashboard**: Visualização de métricas e insights
 """
 )
