@@ -45,17 +45,24 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Bem-vindo ao Licita.AI")
+st.title("Página Inicial")
 st.divider()
+
+# Add image to the Streamlit page
+image_path = "/Users/morossini/Projects/Licita.AI/assets/licita_ai_cover.png"
+if os.path.exists(image_path):
+    st.image(image_path, width=1200)
+else:
+    st.title("Bem-vindo ao Licita.AI")
 
 st.markdown(
     """
-#### Inteligência Artificial aplicada a licitações
-
-
+##### 🤖 Licita.AI: Inteligência Artificial aplicada a licitações
 Navegue pelo menu lateral para acessar as diferentes funcionalidades:
 
 - **📄 Assistente**: Chat inteligente para análise de editais
+
+- **📚 Conhecimento**: Gerencie o conhecimento relacionado a cada licitação
 
 - **📋 Resumo**: Resumo de licitação
 

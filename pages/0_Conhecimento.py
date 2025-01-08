@@ -9,60 +9,24 @@ dify_client = DifyClient()
 # Page config
 st.set_page_config(page_title="Conhecimento", page_icon="📄", layout="wide")
 
-# Custom CSS to make the sidebar wider
+# Remove top padding and reduce sidebar width
 st.markdown(
     """
     <style>
-        [data-testid="stSidebar"][aria-expanded="true"]{
-            min-width: 500px;
-            max-width: 500px;
+        .block-container {
+            padding-top: 1.2rem;
+            padding-bottom: 1rem;
+        }
+        section[data-testid="stSidebar"] {
+            width: 18rem !important;
+        }
+        section[data-testid="stSidebar"] > div {
+            width: 18rem;
         }
     </style>
     """,
     unsafe_allow_html=True,
 )
-
-# List of existing datasets (moved to sidebar)
-with st.sidebar:
-    st.subheader("Bases de Conhecimento")
-
-    try:
-        # Fetch all datasets
-        datasets = dify_client.fetch_all_datasets()
-
-        if not datasets:
-            st.info("Nenhuma base de conhecimento encontrada")
-        else:
-            for dataset in datasets:
-                col1, col2 = st.columns([0.85, 0.15])
-                with col1:
-                    with st.expander(f"📁 {dataset['name']}", expanded=False):
-                        st.caption(dataset.get("description", "Sem descrição"))
-                        st.divider()
-
-                        # List files in dataset
-                        files = dify_client.list_dataset_files(dataset["id"])
-
-                        if not files:
-                            st.info("Nenhum arquivo encontrado")
-                        else:
-                            for file in files:
-                                st.text(f"📄 {file['name']}")
-                with col2:
-                    if st.button(
-                        "🗑️",
-                        key=f"delete_{dataset['id']}",
-                        help="Excluir base de conhecimento",
-                    ):
-                        try:
-                            if dify_client.delete_dataset(dataset["id"]):
-                                st.success("Base de conhecimento excluída com sucesso!")
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
-
-    except Exception as e:
-        st.error(f"Erro ao carregar bases de conhecimento: {str(e)}")
 
 # Title
 st.title("Conhecimento 📚")
@@ -102,7 +66,7 @@ with st.container():
 if uploaded_files:
     submit_disabled = not (cliente and referencia and id_licitacao)
     if st.button("Nova Licitação", type="primary", disabled=submit_disabled):
-        dataset_name = f"{cliente} - {referencia} - {id_licitacao}"
+        dataset_name = f"_-_{cliente} - {referencia} - {id_licitacao}_-_"
 
         with st.spinner("Criando base de conhecimento..."):
             try:
@@ -135,3 +99,46 @@ if uploaded_files:
                 st.error(f"Erro ao criar base de conhecimento: {str(e)}")
 else:
     st.info("⬆️ Faça upload dos documentos da licitação para continuar")
+
+st.divider()
+
+# List of existing datasets (moved to sidebar)
+st.subheader("Bases de Conhecimento")
+
+try:
+    # Fetch all datasets
+    datasets = dify_client.fetch_all_datasets()
+
+    if not datasets:
+        st.info("Nenhuma base de conhecimento encontrada")
+    else:
+        for dataset in datasets:
+            col1, col2 = st.columns([0.85, 0.15])
+            with col1:
+                with st.expander(f"📁 {dataset['name']}", expanded=False):
+                    st.caption(dataset.get("description", "Sem descrição"))
+                    st.divider()
+
+                    # List files in dataset
+                    files = dify_client.list_dataset_files(dataset["id"])
+
+                    if not files:
+                        st.info("Nenhum arquivo encontrado")
+                    else:
+                        for file in files:
+                            st.text(f"📄 {file['name']}")
+            with col2:
+                if st.button(
+                    "🗑️",
+                    key=f"delete_{dataset['id']}",
+                    help="Excluir base de conhecimento",
+                ):
+                    try:
+                        if dify_client.delete_dataset(dataset["id"]):
+                            st.success("Base de conhecimento excluída com sucesso!")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
+
+except Exception as e:
+    st.error(f"Erro ao carregar bases de conhecimento: {str(e)}")
