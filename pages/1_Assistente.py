@@ -53,7 +53,7 @@ dify_client = DifyClient()
 # Sidebar - Available Tenders
 with st.sidebar:
     st.info(
-        "🚨 Copie e cole o ID da licitação desejada ao lado no campo **'id_licitacao_atual'** para iniciar a conversa."
+        "🚨 Clique abaixo na licitação desejada para copiar seu Id, depois cole ao lado no campo **'id_licitacao_atual'** antes de iniciar a conversa."
     )
     st.subheader("Licitações Disponíveis")
     try:
@@ -61,7 +61,14 @@ with st.sidebar:
         if datasets:
             for dataset in datasets:
                 dataset_name = dataset["name"].replace("_-_", "")
-                if st.button(f"{dataset_name}", type="tertiary"):
+                # Get dataset status
+                status_type, status_icon, _ = dify_client.get_dataset_status(
+                    dataset["id"]
+                )
+
+                # Create button with status icon
+                button_label = f"{status_icon} {dataset_name}"
+                if st.button(button_label, type="tertiary"):
                     copy_to_clipboard(dataset_name)
                     st.toast("Texto copiado para a área de transferência!", icon="✅")
         else:
