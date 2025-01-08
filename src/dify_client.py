@@ -481,6 +481,37 @@ class DifyClient:
                 logger.error(f"Response content: {e.response.text}")
             raise DifyClientError(f"Failed to delete dataset: {str(e)}") from e
 
+    def delete_document(self, dataset_id: str, document_id: str) -> bool:
+        """Delete a document from a dataset.
+
+        Args:
+            dataset_id: The ID of the dataset containing the document
+            document_id: The ID of the document to delete
+
+        Returns:
+            bool: True if deletion was successful
+
+        Raises:
+            DifyClientError: If the deletion fails
+        """
+        try:
+            url = f"{self.base_url}/datasets/{dataset_id}/documents/{document_id}"
+            headers = {
+                "Authorization": f"Bearer {self._get_api_key(for_knowledge=True)}"
+            }
+            self._log_request_info("DELETE", url, headers=headers)
+
+            response = requests.delete(url, headers=headers)
+            self._validate_api_response(response, "Delete document")
+            return True
+
+        except RequestException as e:
+            logger.error(f"Failed to delete document: {str(e)}")
+            if hasattr(e, "response") and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response content: {e.response.text}")
+            raise DifyClientError(f"Failed to delete document: {str(e)}") from e
+
     def get_dataset_status(self, dataset_id: str) -> tuple[str, str, str]:
         """Get the overall status of a dataset based on its documents' status.
 
@@ -498,20 +529,31 @@ class DifyClient:
             if not documents:
                 return "success", "✅", "Sem documentos"
 
-            has_processing = False
-            has_error = False
+            total_docs = len(documents)
+            completed_docs = 0
+            processing_docs = 0
+            error_docs = 0
 
             for doc in documents:
                 status = doc.get("indexing_status", "").lower()
-                if status in ["waiting", "indexing", "parsing", "cleaning"]:
-                    has_processing = True
-                elif status == "error" or doc.get("error"):
-                    has_error = True
+                if status == "completed" and not doc.get("error"):
+                    completed_docs += 1
+                elif status in ["waiting", "indexing", "parsing", "cleaning"]:
+                    processing_docs += 1
+                else:  # error status or has error message
+                    error_docs += 1
 
-            if has_error:
-                return "error", "❌", "Erro no processamento"
-            elif has_processing:
-                return "warning", "⏳", "Processando..."
+            # If any document has error, the whole dataset is in error state
+            if error_docs > 0:
+                return (
+                    "error",
+                    "❌",
+                    f"Erro ({error_docs} documento{'s' if error_docs > 1 else ''})",
+                )
+            # If any document is still processing, dataset is in processing state
+            elif processing_docs > 0:
+                return "warning", "⏳", f"Processando ({processing_docs}/{total_docs})"
+            # All documents completed successfully
             else:
                 return "success", "✅", "Processado"
 

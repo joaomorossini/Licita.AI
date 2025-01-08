@@ -37,6 +37,7 @@ MOCK_PROCESSING_DOCUMENTS = {
     "data": [
         {"indexing_status": "completed", "name": "doc1.pdf"},
         {"indexing_status": "indexing", "name": "doc2.pdf"},
+        {"indexing_status": "completed", "name": "doc3.pdf"},
     ]
 }
 
@@ -44,6 +45,15 @@ MOCK_ERROR_DOCUMENTS = {
     "data": [
         {"indexing_status": "completed", "name": "doc1.pdf"},
         {"indexing_status": "error", "error": "Failed to process", "name": "doc2.pdf"},
+        {"indexing_status": "completed", "name": "doc3.pdf"},
+    ]
+}
+
+MOCK_MULTIPLE_ERRORS_DOCUMENTS = {
+    "data": [
+        {"indexing_status": "completed", "name": "doc1.pdf"},
+        {"indexing_status": "error", "error": "Failed to process", "name": "doc2.pdf"},
+        {"indexing_status": "error", "error": "Another error", "name": "doc3.pdf"},
     ]
 }
 
@@ -118,6 +128,22 @@ def mock_responses():
             status=200,
         )
 
+        # Add mock for multiple errors scenario
+        rsps.add(
+            responses.GET,
+            "https://test.dify.api/datasets/multiple_errors_dataset/documents",
+            json=MOCK_MULTIPLE_ERRORS_DOCUMENTS,
+            status=200,
+        )
+
+        # Mock document deletion endpoint
+        rsps.add(
+            responses.DELETE,
+            "https://test.dify.api/datasets/test_dataset_id/documents/test_doc_id",
+            status=204,
+            body="",  # Empty response body for 204 status
+        )
+
         yield rsps
 
 
@@ -176,7 +202,7 @@ def test_get_dataset_status_processing(mock_responses, dify_client):
     status_type, icon, text = dify_client.get_dataset_status("processing_dataset")
     assert status_type == "warning"
     assert icon == "⏳"
-    assert text == "Processando..."
+    assert text == "Processando (1/3)"
 
 
 def test_get_dataset_status_error(mock_responses, dify_client):
@@ -184,7 +210,15 @@ def test_get_dataset_status_error(mock_responses, dify_client):
     status_type, icon, text = dify_client.get_dataset_status("error_dataset")
     assert status_type == "error"
     assert icon == "❌"
-    assert text == "Erro no processamento"
+    assert text == "Erro (1 documento)"
+
+
+def test_get_dataset_status_multiple_errors(mock_responses, dify_client):
+    """Test get_dataset_status when multiple documents have errors."""
+    status_type, icon, text = dify_client.get_dataset_status("multiple_errors_dataset")
+    assert status_type == "error"
+    assert icon == "❌"
+    assert text == "Erro (2 documentos)"
 
 
 def test_get_document_status_indicator():
@@ -204,3 +238,16 @@ def test_get_document_status_indicator():
     assert dify_client.get_document_status_indicator("error") == "❌"
     assert dify_client.get_document_status_indicator("unknown_status") == "❌"
     assert dify_client.get_document_status_indicator("") == "❌"
+
+
+def test_delete_document(mock_responses, dify_client):
+    """Test that delete_document makes correct API call and returns success."""
+    result = dify_client.delete_document("test_dataset_id", "test_doc_id")
+    assert result is True
+
+    # Verify the API was called correctly
+    assert len(mock_responses.calls) == 1
+    assert (
+        mock_responses.calls[0].request.url
+        == "https://test.dify.api/datasets/test_dataset_id/documents/test_doc_id"
+    )

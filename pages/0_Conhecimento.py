@@ -123,13 +123,19 @@ try:
                 dataset["id"]
             )
 
-            col1, col2 = st.columns([0.85, 0.15])
+            # Adjust column widths to minimize spacing between buttons
+            col1, col2, col3 = st.columns([0.9, 0.05, 0.05])
             with col1:
+                # Extract tender name from dataset name (remove _-_ prefix/suffix)
+                tender_name = dataset["name"].replace("_-_", "").strip()
+
                 with st.expander(
-                    f"**Status**: {status_text} {status_icon} / **ID Licitação**: {dataset['name'].replace("_-_", "")}",
+                    f"**Status**: {status_text} {status_icon}     •     **Id Licitação**: {tender_name}",
                     expanded=False,
                 ):
-                    st.caption(dataset.get("description", "Sem descrição"))
+                    # Clean up description text
+                    description = f"Útil para buscar informações relevantes referentes à licitação: {tender_name}"
+                    st.caption(description)
                     st.divider()
 
                     # List files in dataset
@@ -146,12 +152,51 @@ try:
                             )
                             error_msg = file.get("error", "")
 
-                            doc_text = f"Status: {status_indicator} | Documento: {file['name']}"
-                            if error_msg:
-                                doc_text += f" - Erro: {error_msg}"
+                            # Create a container for each document for consistent spacing
+                            with st.container():
+                                doc_cols = st.columns([0.05, 0.85, 0.1])
 
-                            st.text(doc_text)
+                                # Status icon
+                                with doc_cols[0]:
+                                    st.text(status_indicator)
+
+                                # Document name and error message
+                                with doc_cols[1]:
+                                    st.text(file["name"])
+                                    if error_msg:
+                                        st.caption(f"❗ {error_msg}")
+
+                                # Delete button
+                                with doc_cols[2]:
+                                    if st.button(
+                                        "🗑️",
+                                        key=f"delete_doc_{dataset['id']}_{file['id']}",
+                                        help="Excluir documento",
+                                    ):
+                                        try:
+                                            if dify_client.delete_document(
+                                                dataset["id"], file["id"]
+                                            ):
+                                                st.success(
+                                                    "Documento excluído com sucesso!"
+                                                )
+                                                st.rerun()
+                                        except Exception as e:
+                                            st.error(
+                                                f"Erro ao excluir documento: {str(e)}"
+                                            )
+
             with col2:
+                # Add files button with plus sign icon
+                if st.button(
+                    "➕",
+                    key=f"add_files_{dataset['id']}",
+                    help="Adicionar arquivos",
+                ):
+                    st.session_state.selected_dataset = dataset["id"]
+                    st.session_state.show_upload_form = True
+
+            with col3:
                 if st.button(
                     "🗑️",
                     key=f"delete_{dataset['id']}",
@@ -163,6 +208,63 @@ try:
                             st.rerun()
                     except Exception as e:
                         st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
+
+    # Add files form (shown when add_files button is clicked)
+    if (
+        hasattr(st.session_state, "show_upload_form")
+        and st.session_state.show_upload_form
+    ):
+        st.divider()
+        st.subheader("Adicionar Arquivos")
+
+        uploaded_files = st.file_uploader(
+            "Selecione os arquivos para adicionar (PDF)",
+            type=["pdf"],
+            accept_multiple_files=True,
+            key="additional_docs",
+        )
+
+        col1, col2 = st.columns([0.8, 0.2])
+        with col1:
+            if uploaded_files:
+                if st.button(
+                    "Adicionar Arquivos",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    with st.spinner("Adicionando arquivos..."):
+                        try:
+                            for uploaded_file in uploaded_files:
+                                # Create a temporary file
+                                with tempfile.NamedTemporaryFile(
+                                    delete=False, suffix=".pdf"
+                                ) as tmp_file:
+                                    # Write the uploaded file to the temporary file
+                                    tmp_file.write(uploaded_file.getvalue())
+                                    tmp_file.flush()
+
+                                    # Upload to Dify
+                                    with open(tmp_file.name, "rb") as f:
+                                        dify_client.upload_knowledge_file(
+                                            f.read(),
+                                            uploaded_file.name,
+                                            dataset_id=st.session_state.selected_dataset,
+                                        )
+
+                                    # Clean up the temporary file
+                                    os.unlink(tmp_file.name)
+
+                            st.success("Arquivos adicionados com sucesso!")
+                            st.session_state.show_upload_form = False
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"Erro ao adicionar arquivos: {str(e)}")
+
+        with col2:
+            if st.button("Cancelar", use_container_width=True):
+                st.session_state.show_upload_form = False
+                st.rerun()
 
 except Exception as e:
     st.error(f"Erro ao carregar bases de conhecimento: {str(e)}")
