@@ -37,7 +37,7 @@ with st.sidebar:
 st.title("Feedback 🗣️")
 st.divider()
 
-src = "https://forms.gle/uJ5pBod8g7ffkYLp6"
+src = "https://forms.gle/QTNVHVmAXpM1LWWC6"
 
 
 # Style the iframe element and hide the specific div
