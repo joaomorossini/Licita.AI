@@ -107,7 +107,7 @@ else:
 
 st.divider()
 
-# List of existing datasets (moved to sidebar)
+# List of existing datasets
 st.subheader("Bases de Conhecimento")
 
 try:
@@ -118,9 +118,17 @@ try:
         st.info("Nenhuma base de conhecimento encontrada")
     else:
         for dataset in datasets:
+            # Get dataset status
+            status_type, status_icon, status_text = dify_client.get_dataset_status(
+                dataset["id"]
+            )
+
             col1, col2 = st.columns([0.85, 0.15])
             with col1:
-                with st.expander(f"📁 {dataset['name']}", expanded=False):
+                with st.expander(
+                    f"Status: {status_text} {status_icon} / ID Licitação: {dataset['name']}",
+                    expanded=False,
+                ):
                     st.caption(dataset.get("description", "Sem descrição"))
                     st.divider()
 
@@ -131,7 +139,18 @@ try:
                         st.info("Nenhum arquivo encontrado")
                     else:
                         for file in files:
-                            st.text(f"📄 {file['name']}")
+                            status_indicator = (
+                                dify_client.get_document_status_indicator(
+                                    file.get("indexing_status", "")
+                                )
+                            )
+                            error_msg = file.get("error", "")
+
+                            doc_text = f"Status: {status_indicator} | Documento: {file['name']}"
+                            if error_msg:
+                                doc_text += f" - Erro: {error_msg}"
+
+                            st.text(doc_text)
             with col2:
                 if st.button(
                     "🗑️",

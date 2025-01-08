@@ -480,3 +480,57 @@ class DifyClient:
                 logger.error(f"Response status: {e.response.status_code}")
                 logger.error(f"Response content: {e.response.text}")
             raise DifyClientError(f"Failed to delete dataset: {str(e)}") from e
+
+    def get_dataset_status(self, dataset_id: str) -> tuple[str, str, str]:
+        """Get the overall status of a dataset based on its documents' status.
+
+        Args:
+            dataset_id: The ID of the dataset to check
+
+        Returns:
+            tuple: Contains (status_type, status_icon, status_text)
+                - status_type: 'success', 'warning', or 'error'
+                - status_icon: Emoji indicator
+                - status_text: Human readable status message
+        """
+        try:
+            documents = self.list_dataset_files(dataset_id)
+            if not documents:
+                return "success", "✅", "Sem documentos"
+
+            has_processing = False
+            has_error = False
+
+            for doc in documents:
+                status = doc.get("indexing_status", "").lower()
+                if status in ["waiting", "indexing", "parsing", "cleaning"]:
+                    has_processing = True
+                elif status == "error" or doc.get("error"):
+                    has_error = True
+
+            if has_error:
+                return "error", "❌", "Erro no processamento"
+            elif has_processing:
+                return "warning", "⏳", "Processando..."
+            else:
+                return "success", "✅", "Processado"
+
+        except Exception as e:
+            return "error", "❌", f"Erro: {str(e)}"
+
+    def get_document_status_indicator(self, status: str) -> str:
+        """Get the visual indicator for a document's status.
+
+        Args:
+            status: The status string from the document
+
+        Returns:
+            str: An emoji indicating the status (✅ for success, ⏳ for processing, ❌ for error)
+        """
+        status = status.lower()
+        if status == "completed":
+            return "✅"
+        elif status in ["waiting", "indexing", "parsing", "cleaning"]:
+            return "⏳"
+        else:
+            return "❌"
