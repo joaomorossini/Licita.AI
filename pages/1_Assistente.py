@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+from src.dify_client import DifyClient
 
 
 # Configure page
@@ -29,6 +30,27 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Create DifyClient instance
+dify_client = DifyClient()
+
+# Sidebar - Available Tenders
+with st.sidebar:
+    st.subheader("Licitações Disponíveis")
+    try:
+        datasets = dify_client.fetch_all_datasets()
+        if datasets:
+            for dataset in datasets:
+                st.markdown(f"- {dataset['name'].replace('_-_', '')}")
+        else:
+            st.warning("Nenhuma licitação disponível.")
+            st.info(
+                "Crie uma nova base de conhecimento para começar, ou prossiga assim mesmo, clicando em 'Iniciar Conversa' ao lado, sem preencher o id da licitação ."
+            )
+
+    except Exception as e:
+        st.error("Erro ao carregar licitações disponíveis.")
+        st.error(str(e))
 
 st.title("Assistente de Licitações 💬")
 st.divider()
