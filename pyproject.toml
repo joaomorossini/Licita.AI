@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "licita-ai"
 version = "0.1.0"
-description = "A Streamlit app for chatting with procurement documents using Dify"
-authors = ["Your Name <your.email@example.com>"]
+description = "Licita.AI: Inteligência Artificial aplicada a licitações"
+authors = ["João Morossini <morossini@proton.me>"]
 readme = "README.md"
 packages = [{include = "src"}]
 

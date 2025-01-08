@@ -20,7 +20,7 @@ if missing_vars:
 # Configure page
 st.set_page_config(
     page_title="Licita.AI",
-    page_icon="🤖",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={"Get help": None, "Report a bug": None, "About": None},
@@ -46,7 +46,7 @@ st.markdown(
 )
 
 st.title("Página Inicial")
-st.divider()
+# st.divider()
 
 # Add image to the Streamlit page
 image_path = "/Users/morossini/Projects/Licita.AI/assets/licita_ai_cover.png"
@@ -55,19 +55,20 @@ if os.path.exists(image_path):
 else:
     st.title("Bem-vindo ao Licita.AI")
 
+st.divider()
+
 st.markdown(
-    """
-##### 🤖 Licita.AI: Inteligência Artificial aplicada a licitações
-Navegue pelo menu lateral para acessar as diferentes funcionalidades:
+    """\n
+    ##### Licita.AI 🧠: Inteligência Artificial aplicada a licitações
 
-- **📄 Assistente**: Chat inteligente para análise de editais
+**📚 Conhecimento**: Gerencie o conhecimento relacionado a cada licitação
 
-- **📚 Conhecimento**: Gerencie o conhecimento relacionado a cada licitação
+**📄 Assistente**: Chat inteligente para análise de editais
 
-- **📋 Resumo**: Resumo de licitação
+**📋 Resumo**: Resumo de licitação
 
-- **📰 Boletins**: Acompanhamento de boletins de licitação
+**📰 Boletins**: Acompanhamento de boletins de licitação (Em construção)
 
-- **📊 Dashboard**: Visualização de métricas e insights
+**📊 Dashboard**: Visualização de métricas e insights (Em construção)
 """
 )
