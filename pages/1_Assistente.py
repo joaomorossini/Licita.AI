@@ -52,10 +52,10 @@ dify_client = DifyClient()
 
 # Sidebar - Available Tenders
 with st.sidebar:
-    st.subheader("Licitações Disponíveis")
     st.info(
-        "Copie e cole o ID da licitação desejada ao lado no campo 'id_licitacao_atual' para iniciar a conversa."
+        "🚨 Copie e cole o ID da licitação desejada ao lado no campo **'id_licitacao_atual'** para iniciar a conversa."
     )
+    st.subheader("Licitações Disponíveis")
     try:
         datasets = dify_client.fetch_all_datasets()
         if datasets:

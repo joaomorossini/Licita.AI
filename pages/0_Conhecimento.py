@@ -126,7 +126,7 @@ try:
             col1, col2 = st.columns([0.85, 0.15])
             with col1:
                 with st.expander(
-                    f"Status: {status_text} {status_icon} / ID Licitação: {dataset['name']}",
+                    f"**Status**: {status_text} {status_icon} / **ID Licitação**: {dataset['name'].replace("_-_", "")}",
                     expanded=False,
                 ):
                     st.caption(dataset.get("description", "Sem descrição"))
