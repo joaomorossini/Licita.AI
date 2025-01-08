@@ -116,7 +116,7 @@ df = pd.DataFrame({"Data": dates, "Valor": values, "Quantidade": tenders})
 # Monthly aggregation
 df_monthly = (
     df.set_index("Data")
-    .resample("M")
+    .resample("ME")
     .agg({"Valor": "sum", "Quantidade": "sum"})
     .reset_index()
 )
