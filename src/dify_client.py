@@ -122,7 +122,7 @@ class DifyClient:
             logger.info("Files included in request")
 
     def create_dataset(self, name: str) -> str:
-        """Create a new dataset in Dify.
+        """Create a new dataset in Dify with optimized settings.
 
         Args:
             name: The name of the dataset
@@ -144,6 +144,15 @@ class DifyClient:
                 "description": f"Útil para buscar informações relevantes referentes à licitação: {name}",
                 "permission": "only_me",
                 "indexing_technique": "high_quality",
+                "embedding_model": "text-embedding-3-large",
+                "retrieval_model": {
+                    "search_method": "hybrid_search",
+                    "reranking_enable": False,
+                    "weights": {"semantic": 0.8, "keyword": 0.2},
+                    "top_k": 5,
+                    "score_threshold_enabled": True,
+                    "score_threshold": 0.25,
+                },
             }
             self._log_request_info("POST", url, headers=headers, data=data)
 

@@ -154,7 +154,26 @@ def test_create_dataset(mock_responses, dify_client):
 
     # Verify the API was called correctly
     assert len(mock_responses.calls) == 1
-    assert mock_responses.calls[0].request.url == "https://test.dify.api/datasets"
+    request = mock_responses.calls[0].request
+    assert request.url == "https://test.dify.api/datasets"
+
+    # Verify the request body contains all expected settings
+    import json
+
+    request_json = json.loads(request.body)
+    assert request_json["name"] == "test_dataset"
+    assert request_json["permission"] == "only_me"
+    assert request_json["indexing_technique"] == "high_quality"
+    assert request_json["embedding_model"] == "text-embedding-3-large"
+
+    # Verify retrieval model settings
+    retrieval_model = request_json["retrieval_model"]
+    assert retrieval_model["search_method"] == "hybrid_search"
+    assert retrieval_model["reranking_enable"] is False
+    assert retrieval_model["weights"] == {"semantic": 0.8, "keyword": 0.2}
+    assert retrieval_model["top_k"] == 5
+    assert retrieval_model["score_threshold_enabled"] is True
+    assert retrieval_model["score_threshold"] == 0.25
 
 
 def test_upload_pdf_to_dify(mock_responses, dify_client):
