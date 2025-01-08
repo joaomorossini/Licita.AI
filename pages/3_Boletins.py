@@ -54,6 +54,10 @@ st.markdown(
 st.title("Boletins de Oportunidades 📰💰")
 st.divider()
 
+st.warning(
+    "⚠️ Em construção. Em breve você poderá visualizar boletins de licitação reais aqui."
+)
+
 # Date filters at the top
 st.markdown('<div class="date-filters">', unsafe_allow_html=True)
 date_cols = st.columns([1, 2, 0.5, 1, 2, 6])

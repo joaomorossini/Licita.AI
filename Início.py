@@ -45,6 +45,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+with st.sidebar:
+    st.info(
+        "💡 **DICA**: Para alterar o tema (*Light* ou *Dark*), clique no canto superior direito, depois em **Settings** e selecione o tema desejado"
+    )
+
 st.title("Página Inicial 🏠")
 st.divider()
 

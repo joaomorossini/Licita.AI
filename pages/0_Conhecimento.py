@@ -28,6 +28,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+with st.sidebar:
+    st.info(
+        """⚠️ **ATENÇÃO**: Fique atento ao **status de processamento** dos seus arquivos. Caso note que algum documento está demorando muito para processar, você pode deletá-lo e adicioná-lo novamente""",
+    )
+
 # Title
 st.title("Conhecimento 📚")
 st.divider()

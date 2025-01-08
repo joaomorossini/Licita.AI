@@ -102,6 +102,6 @@ with st.sidebar:
         st.rerun()
 
 # Placeholder for future implementation
-st.info(
-    "Dashboard em desenvolvimento. Em breve você poderá visualizar métricas e insights sobre licitações aqui."
+st.warning(
+    "⚠️ Em construção. Em breve você poderá visualizar métricas e insights sobre licitações aqui."
 )
