@@ -45,11 +45,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Página Inicial")
-# st.divider()
+st.title("Página Inicial 🏠")
+st.divider()
 
 # Add image to the Streamlit page
-image_path = "/Users/morossini/Projects/Licita.AI/assets/licita_ai_cover.png"
+image_path = "assets/licita_ai_cover.png"
 if os.path.exists(image_path):
     st.image(image_path, width=1200)
 else:
@@ -59,16 +59,17 @@ st.divider()
 
 st.markdown(
     """\n
-    ##### Licita.AI 🧠: Inteligência Artificial aplicada a licitações
+    ##### 🧠 Licita.AI: Inteligência Artificial aplicada a licitações 🧠
 
+    
 **📚 Conhecimento**: Gerencie o conhecimento relacionado a cada licitação
 
 **📄 Assistente**: Chat inteligente para análise de editais
 
 **📋 Resumo**: Resumo de licitação
 
-**📰 Boletins**: Acompanhamento de boletins de licitação (Em construção)
+**📰 Boletins**: Acompanhamento de boletins de licitação (*Em construção*)
 
-**📊 Dashboard**: Visualização de métricas e insights (Em construção)
+**📊 Dashboard**: Visualização de métricas e insights (*Em construção*)
 """
 )
