@@ -17,7 +17,7 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1.2rem;
+            padding-top: 1.5rem;
             padding-bottom: 1.5rem;
         }
         section[data-testid="stSidebar"] {

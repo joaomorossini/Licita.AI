@@ -6,7 +6,7 @@ from src.dify_client import DifyClient
 # Configure page
 st.set_page_config(
     page_title="Assistente de Licitações",
-    page_icon="📄",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={"Get help": None, "Report a bug": None, "About": None},
@@ -17,7 +17,7 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1.2rem;
+            padding-top: 1.5rem;
             padding-bottom: 1.5rem;
         }
         section[data-testid="stSidebar"] {
@@ -91,7 +91,7 @@ src = "https://udify.app/chat/pDAjmEFFaYQqHags"
 iframe_style = """
 <style>
   #dify-iframe {
-    border: 5px groove #ffffff;
+    border: 0px groove #ffffff;
     border-radius: 8px;
     width: 100%;
     height: 575px;
