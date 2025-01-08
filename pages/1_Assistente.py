@@ -53,7 +53,7 @@ dify_client = DifyClient()
 # Sidebar - Available Tenders
 with st.sidebar:
     st.info(
-        "🚨 Clique abaixo na licitação desejada para copiar seu Id, depois cole ao lado no campo **'id_licitacao_atual'** antes de iniciar a conversa."
+        "💡 **DICA**: Clique abaixo na licitação desejada para copiar seu Id, depois cole ao lado no campo **'id_licitacao_atual'** antes de iniciar a conversa."
     )
     st.subheader("Licitações Disponíveis")
     try:
