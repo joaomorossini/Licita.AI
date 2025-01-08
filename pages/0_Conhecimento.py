@@ -65,7 +65,12 @@ with st.container():
 # Submit button outside the form
 if uploaded_files:
     submit_disabled = not (cliente and referencia and id_licitacao)
-    if st.button("Nova Licitação", type="primary", disabled=submit_disabled):
+    if st.button(
+        "Criar Nova Base de Conhecimento",
+        type="primary",
+        disabled=submit_disabled,
+        use_container_width=True,
+    ):
         dataset_name = f"_-_{cliente} - {referencia} - {id_licitacao}_-_"
 
         with st.spinner("Criando base de conhecimento..."):
