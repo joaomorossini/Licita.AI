@@ -75,9 +75,7 @@ with st.sidebar:
     if uploaded_files:
         st.success(f"{len(uploaded_files)} arquivo(s) recebido(s)")
 
-        if st.button(
-            "🔄 Processar Documentos", type="primary", use_container_width=True
-        ):
+        if st.button("🔄 Carregar", type="primary", use_container_width=True):
             with st.spinner("Processando documentos..."):
                 try:
                     # Process PDFs and store in session state
@@ -89,7 +87,7 @@ with st.sidebar:
                         st.session_state.docs_text = utils.concatenate_docs(
                             st.session_state.tender_documents
                         )
-                        st.toast("Documentos processados com sucesso!", icon="✅")
+                        st.toast("Documentos carregados com sucesso!", icon="✅")
                     else:
                         st.error("Nenhum documento foi processado com sucesso.")
                 except Exception as e:
