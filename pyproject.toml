@@ -23,9 +23,13 @@ langchain-community = "0.2.10"
 langchain_core = "0.2.25"
 langchain_openai = "0.1.19"
 
+pypdf = "^5.1.0"
 [tool.poetry.group.dev.dependencies]
 responses = "^0.24.1"
 
 [build-system]
 requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api" 
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+app = "app:main"
