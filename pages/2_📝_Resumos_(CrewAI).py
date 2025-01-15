@@ -66,8 +66,12 @@ if "tender_pdfs" not in st.session_state:
     st.session_state.tender_pdfs = None
 if "tender_documents_text" not in st.session_state:
     st.session_state.tender_documents_text = None
+if "tender_documents_labeled_sections" not in st.session_state:
+    st.session_state.tender_documents_labeled_sections = None
 if "summary" not in st.session_state:
     st.session_state.summary = None
+if "show_preview" not in st.session_state:
+    st.session_state.show_preview = True
 
 st.title("Resumo de Licitação (CrewAI gpt-4o) 📋")
 st.divider()
@@ -105,7 +109,9 @@ with st.sidebar:
 
 # Main content area
 # Preview section
-with st.expander("🔍 Pré-Visualização dos Documentos", expanded=True):
+with st.expander(
+    "🔍 Pré-Visualização dos Documentos", expanded=st.session_state.show_preview
+):
     with st.container(height=400, border=True):
         if st.session_state.get("tender_documents_text"):
             st.markdown(st.session_state.tender_documents_text)
@@ -122,6 +128,9 @@ if st.button(
     with st.spinner("Gerando resumo..."):
         st.session_state.summary = crew.generate_summary(
             st.session_state.tender_documents_text
+        )
+        st.session_state.show_preview = (
+            False  # Collapse preview when summary is generated
         )
         st.toast("Resumo gerado com sucesso!", icon="✅")
 
