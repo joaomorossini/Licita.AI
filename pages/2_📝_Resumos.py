@@ -1,6 +1,7 @@
 from typing import Optional
 import streamlit as st
 import rootpath
+import asyncio
 
 rootpath.append()
 
@@ -76,7 +77,7 @@ if "show_preview" not in st.session_state:
 if "processing_status" not in st.session_state:
     st.session_state.processing_status = None
 
-st.title("Resumo de Licitação (CrewAI gpt-4o) 📋")
+st.title("Resumo de Licitação 📋")
 st.divider()
 
 # Sidebar - File Upload Section
@@ -164,9 +165,11 @@ if st.button(
                 status_text.text(st.session_state.processing_status)
 
             # Generate summary with progress updates
-            st.session_state.summary = crew.generate_summary(
-                st.session_state.tender_documents_text,
-                progress_callback=update_progress,
+            st.session_state.summary = asyncio.run(
+                crew.generate_summary(
+                    st.session_state.tender_documents_text,
+                    progress_callback=update_progress,
+                )
             )
 
             # Update final status
