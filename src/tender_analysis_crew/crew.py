@@ -14,6 +14,9 @@ from langchain.schema import BaseOutputParser
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import time
+import asyncio
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor
 
 from src.tender_analysis_crew.templates.extract_and_label_sections_template import (
     extract_and_label_sections_template,
@@ -183,13 +186,13 @@ class TenderAnalysisCrew:
         )
         return combined_result
 
-    def _extract_and_label_sections(
+    async def _extract_and_label_sections(
         self,
         tender_documents_chunk_text: str,
         prompt_template: Optional[str] = extract_and_label_sections_template,
         json_schema: Optional[Dict[str, Any]] = extract_and_label_sections_json_schema,
     ) -> Dict[str, Any]:
-        """Extract and label sections from tender documents.
+        """Extract and label sections from tender documents asynchronously.
 
         Args:
             tender_documents_chunk_text: The text to analyze
@@ -213,8 +216,8 @@ class TenderAnalysisCrew:
         # Chain the prompt and the model
         chain = prompt | structured_model
 
-        # Invoke the chain
-        response = chain.invoke(
+        # Invoke the chain asynchronously
+        response = await chain.ainvoke(
             {
                 "tender_documents_chunk_text": tender_documents_chunk_text,
             }
@@ -255,16 +258,18 @@ class TenderAnalysisCrew:
         logger.debug("Sections filtered by category")
         return filtered_sections
 
-    def generate_summary(
+    async def generate_summary(
         self,
         tender_documents_text: str,
         progress_callback: Optional[Callable[[int], None]] = None,
+        max_concurrent_chunks: int = 10,
     ) -> str:
         """Generate a summary of tender documents.
 
         Args:
             tender_documents_text: The text content of tender documents
             progress_callback: Optional callback function to report progress (receives current chunk number)
+            max_concurrent_chunks: Maximum number of chunks to process concurrently (default: 10)
 
         Returns:
             str: The generated summary
@@ -287,21 +292,35 @@ class TenderAnalysisCrew:
             log_file.write(f"Text splitting time: {split_time:.2f} seconds\n")
             log_file.write(f"Number of chunks: {len(chunks)}\n\n")
 
-            # Process each chunk
+            # Process chunks in batches
             chunk_results = []
-            for i, chunk in enumerate(chunks):
-                chunk_start = time.time()
-                logger.debug(f"Processing chunk {i+1}/{len(chunks)}")
-                result = self._extract_and_label_sections(chunk)
-                chunk_results.append(result)
-                chunk_time = time.time() - chunk_start
-                log_file.write(
-                    f"Chunk {i+1} processing time: {chunk_time:.2f} seconds\n"
-                )
+            processed_chunks = 0
+            total_chunks = len(chunks)
 
-                # Update progress if callback provided
+            # Process chunks in batches of max_concurrent_chunks
+            for i in range(0, total_chunks, max_concurrent_chunks):
+                batch = chunks[i : i + max_concurrent_chunks]
+                batch_tasks = []
+
+                # Create tasks for the current batch
+                for chunk in batch:
+                    task = asyncio.create_task(self._extract_and_label_sections(chunk))
+                    batch_tasks.append(task)
+
+                # Wait for the current batch to complete
+                batch_results = await asyncio.gather(*batch_tasks)
+                chunk_results.extend(batch_results)
+
+                # Update progress for completed chunks
+                processed_chunks += len(batch)
                 if progress_callback:
-                    progress_callback(i + 1)
+                    progress_callback(min(processed_chunks, total_chunks))
+
+                # Log processing time for the batch
+                batch_time = time.time() - start_time
+                log_file.write(
+                    f"Batch {i//max_concurrent_chunks + 1} processing time: {batch_time:.2f} seconds\n"
+                )
 
             # Combine results from all chunks
             combine_start = time.time()
