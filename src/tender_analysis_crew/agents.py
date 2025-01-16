@@ -27,7 +27,6 @@ analista_de_licitacoes = Agent(
     allow_delegation=False,
 )
 
-
 compilador_de_relatorio = Agent(
     role="Compilador de Relatórios de Licitações",
     goal=(

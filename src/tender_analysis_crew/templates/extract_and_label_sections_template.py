@@ -17,7 +17,7 @@ extract_and_label_sections_template = dedent(
     # Tarefa
 
     ## Descrição
-    Analisar cuidadosamente os documentos da licitação para identificar, extrair e categorizar os trechos MAIS RELEVANTES. Categorias disponíveis: 'objeto_da_licitacao', 'prazos_e_cronograma', 'requisitos_tecnicos', 'economicos_financeiros', 'riscos', 'oportunidades', 'outros_requisitos' e 'outras_informacoes_relevantes'.
+    Analisar cuidadosamente os documentos da licitação para identificar, extrair e categorizar os trechos MAIS RELEVANTES. Categorias disponíveis: 'prazos_e_cronograma', 'requisitos_tecnicos', 'economicos_financeiros', 'riscos', 'oportunidades', 'outros_requisitos' e 'outras_informacoes_relevantes'.
 
     <tender_documents_chunk_text>
     {tender_documents_chunk_text}
@@ -85,7 +85,6 @@ extract_and_label_sections_json_schema = {
                     "categoria": {
                         "type": "string",
                         "enum": [
-                            "objeto_da_licitacao",
                             "prazos_e_cronograma",
                             "requisitos_tecnicos",
                             "economicos_financeiros",
@@ -95,13 +94,36 @@ extract_and_label_sections_json_schema = {
                             "outras_informacoes_relevantes",
                         ],
                     },
-                    "checklist": {"type": "integer", "enum": [0, 1]},
+                    "checklist": {
+                        "type": "integer",
+                        "enum": [0, 1],
+                        "description": "1 indicates sections that directly impact the writing and production of a tender proposal/bid, while 0 indicates sections that do not.",
+                    },
                     "transcricao": {"type": "string"},
-                    "comentario": {"type": "string"},
+                    "comentario": {
+                        "type": "string",
+                        "description": "Useful and non-obvious comments that raise important points regarding the section. This field is optional and should ONLY be provided if the comment is pertinent and useful. Comments should only be included if and when they add valuable and actionable information, not noise.",
+                    },
                 },
                 "required": ["categoria", "checklist", "transcricao"],
             },
-        }
+        },
+        "overview": {
+            "type": "object",
+            "properties": {
+                "client_name": {"type": "string"},
+                "tender_id": {
+                    "type": "string",
+                    "description": "The unique identification code or number for the tender, usually including the year in which the tender was issued.",
+                },
+                "tender_date": {"type": "string"},
+                "tender_object": {
+                    "type": "string",
+                    "description": "Transcrição completa do objeto da licitação",
+                },
+            },
+            "required": ["client_name", "tender_id", "tender_object"],
+        },
     },
-    "required": ["sections"],
+    "required": ["sections", "overview"],
 }
