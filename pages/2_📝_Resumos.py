@@ -122,9 +122,12 @@ with st.expander(
         if st.session_state.get("tender_documents_text"):
             # Add text length information
             total_chars = len(st.session_state.tender_documents_text)
+            total_tokens = utils._length_function(
+                st.session_state.tender_documents_text
+            )
             chunks = utils.split_text(st.session_state.tender_documents_text)
             st.caption(
-                f"📊 Estatísticas do Documento: {total_chars:,} caracteres • {len(chunks)} chunks"
+                f"📊 Estatísticas do Documento: {total_chars:,} caracteres • {total_tokens} tokens • {len(chunks)} chunks"
             )
             st.markdown(st.session_state.tender_documents_text)
         else:
