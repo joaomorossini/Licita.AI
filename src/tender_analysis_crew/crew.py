@@ -92,8 +92,8 @@ class TenderAnalysisUtils:
     def split_text(text: str) -> List[str]:
         splitter = RecursiveCharacterTextSplitter(
             separators=["\n\n", "\n", " ", ""],
-            chunk_size=2000,
-            chunk_overlap=200,
+            chunk_size=2500,
+            chunk_overlap=250,
             length_function=TenderAnalysisUtils._length_function,
         )
         chunks = splitter.split_text(text=text)
