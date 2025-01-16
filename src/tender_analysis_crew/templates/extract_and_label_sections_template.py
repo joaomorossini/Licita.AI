@@ -26,6 +26,8 @@ extract_and_label_sections_template = dedent(
     ## Output Esperado
     Um compilado estruturado dos trechos MAIS RELEVANTES da licitação, cada um com os tópicos 'categoria', 'checklist' (usar '1' para informações que impactam diretamente a elaboração e apresentação da proposta e '0' para as demais), 'transcricao' e 'comentario'. Siga o modelo abaixo, delimitado por <<<>>>.
 
+    Em relação à categoria 'praços_e_cronograma', extraia APENAS as datas relevantes para esse momento, ou seja, aquelas relacionadas às fases principais da licitação e à execução do objeto contratual.
+
 
     MODELO:
     <<<
