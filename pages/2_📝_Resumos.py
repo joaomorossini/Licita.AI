@@ -5,14 +5,15 @@ import asyncio
 
 rootpath.append()
 
-from src.tender_analysis_crew.crew import TenderAnalysisCrew, TenderAnalysisUtils
+from src.tender_analysis_crew.crew import TenderAnalysisCrew
+from src.utils import TenderKnowledgeUtils
 
 # TODO: Otimizar formato e instruções do resumo com base nos resumos da Fast
 # TODO: Adicionar opção para salvar resumo em PDF
 # TODO: Utilizar API da Adobe pra ler pdfs complexos, contendo imagens e tabelas: https://opensource.adobe.com/developers.adobe.com/apis/documentcloud/dcsdk/pdf-extract.html
 
 crew = TenderAnalysisCrew()
-utils = TenderAnalysisUtils()
+utils = TenderKnowledgeUtils()
 
 # Configure page
 st.set_page_config(

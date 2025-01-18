@@ -1,23 +1,25 @@
-from datetime import datetime
 import os
-from tempfile import TemporaryDirectory, NamedTemporaryFile
+import time
 import logging
+import asyncio
+from datetime import datetime
+from tempfile import TemporaryDirectory, NamedTemporaryFile
 from typing import Any, Dict, List, Optional, Callable
+from concurrent.futures import ThreadPoolExecutor
+
+import aiohttp
+import tiktoken
 from dotenv import load_dotenv
 from crewai import Crew, Process
 from crewai.llm import LLM
-import tiktoken
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import AzureChatOpenAI
 from langchain.schema import BaseOutputParser
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import time
-import asyncio
-import aiohttp
-from concurrent.futures import ThreadPoolExecutor
 
+from src.utils import TenderKnowledgeUtils
 from src.tender_analysis_crew.templates.extract_and_label_sections_template import (
     extract_and_label_sections_template,
     extract_and_label_sections_json_schema,
@@ -46,61 +48,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-class TenderAnalysisUtils:
-    @staticmethod
-    def load_pdfs_to_docs(uploaded_pdfs):
-        logger.debug("Loading PDFs to documents")
-        all_documents = []
-        with TemporaryDirectory() as temp_dir:
-            for uploaded_file in uploaded_pdfs:
-                try:
-                    temp_path = os.path.join(temp_dir, uploaded_file.name)
-                    with open(temp_path, "wb") as temp_file:
-                        temp_file.write(uploaded_file.getvalue())
-                    logger.debug(f"File written to temporary path: {temp_path}")
-
-                    loader = PyPDFLoader(file_path=temp_path)
-                    documents = loader.load()
-                    logger.debug(
-                        f"Loaded {len(documents)} documents from {uploaded_file.name}"
-                    )
-                    all_documents.extend(documents)
-                except Exception as e:
-                    logger.error(f"Error processing document: {e}")
-                    continue
-
-        logger.debug(f"Total documents loaded: {len(all_documents)}")
-        return all_documents
-
-    @staticmethod
-    def concatenate_docs(documents):
-        logger.debug("Concatenating documents")
-        tender_documents = ""
-        for i, doc in enumerate(documents):
-            source = doc.metadata.get("source", "")
-            filename = source.split("/")[-1]
-            filename = filename.split(".")[0]
-            tender_documents += f"{filename} - Pág.{i + 1}\n{doc.page_content}\n"
-        logger.debug("All documents concatenated")
-        return tender_documents
-
-    @staticmethod
-    def _length_function(text: str, encoding: str = "o200k_base") -> int:
-        enc = tiktoken.get_encoding(f"{encoding}")
-        return len(enc.encode(text))
-
-    @staticmethod
-    def split_text(text: str) -> List[str]:
-        splitter = RecursiveCharacterTextSplitter(
-            separators=["\n\n", "\n", " ", ""],
-            chunk_size=2500,
-            chunk_overlap=250,
-            length_function=TenderAnalysisUtils._length_function,
-        )
-        chunks = splitter.split_text(text=text)
-        return chunks
 
 
 class TenderAnalysisCrew:
@@ -137,7 +84,7 @@ class TenderAnalysisCrew:
                 else None
             ),
         )
-        self.utils = TenderAnalysisUtils()
+        self.utils = TenderKnowledgeUtils()
         logger.debug("Crew initialized with agents and tasks")
 
     def _format_section(self, section: Dict[str, Any]) -> str:
