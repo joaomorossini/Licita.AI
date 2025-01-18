@@ -76,12 +76,14 @@ if uploaded_files:
         disabled=submit_disabled,
         use_container_width=True,
     ):
-        dataset_name = f"_-_{cliente} - {referencia} - {id_licitacao}_-_"
+        dataset_name = f"_-_{cliente} - {referencia} - {id_licitacao}_-_"  # TODO: Use this as the namespace in Pinecone
 
         with st.spinner("Criando base de conhecimento..."):
             try:
                 # Create dataset
-                dataset_id = dify_client.create_dataset(name=dataset_name)
+                dataset_id = dify_client.create_dataset(
+                    name=dataset_name
+                )  # TODO: Remove this in Pinecone implementation
 
                 # Upload files
                 for uploaded_file in uploaded_files:
@@ -97,7 +99,7 @@ if uploaded_files:
                         with open(tmp_file.name, "rb") as f:
                             dify_client.upload_knowledge_file(
                                 f.read(), uploaded_file.name, dataset_id=dataset_id
-                            )
+                            )  # TODO: Refactor. Split into chunks, generate embeddings with azure openai and upsert to Pinecone
 
                         # Clean up the temporary file
                         os.unlink(tmp_file.name)
@@ -117,7 +119,9 @@ st.subheader("Bases de Conhecimento")
 
 try:
     # Fetch all datasets
-    datasets = dify_client.fetch_all_datasets()
+    datasets = (
+        dify_client.fetch_all_datasets()
+    )  # TODO: Implement fetch_all_namespaces method with Pinecone
 
     if not datasets:
         st.info("Nenhuma base de conhecimento encontrada")
@@ -126,7 +130,7 @@ try:
             # Get dataset status
             status_type, status_icon, status_text = dify_client.get_dataset_status(
                 dataset["id"]
-            )
+            )  # TODO: Refactor - The indexing step must happen before upserting the vectors.
 
             # Adjust column widths to minimize spacing between buttons
             col1, col2, col3 = st.columns([0.9, 0.05, 0.05])
@@ -144,7 +148,9 @@ try:
                     st.divider()
 
                     # List files in dataset
-                    files = dify_client.list_dataset_files(dataset["id"])
+                    files = dify_client.list_dataset_files(
+                        dataset["id"]
+                    )  # TODO: Implement method for listing all files in a namespace. Filenames will have to be stored in the metadata
 
                     if not files:
                         st.info("Nenhum arquivo encontrado")
