@@ -1,10 +1,12 @@
 import streamlit as st
-from src.dify_client import DifyClient
-import os
+import asyncio
+from typing import Dict, List
 import tempfile
 
-# Initialize Dify client
-dify_client = DifyClient()
+from src.tender_knowledge import TenderKnowledge, DocumentProcessingStatus
+
+# Initialize client
+knowledge = TenderKnowledge()
 
 # Page config
 st.set_page_config(page_title="Conhecimento", page_icon="📄", layout="wide")
@@ -28,26 +30,71 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Initialize session state
+if "processing_status" not in st.session_state:
+    st.session_state.processing_status = {}
+if "show_upload_form" not in st.session_state:
+    st.session_state.show_upload_form = False
+if "selected_index" not in st.session_state:
+    st.session_state.selected_index = None
+
 with st.sidebar:
     st.info(
-        """⚠️ **ATENÇÃO**: Fique atento ao **status de processamento** dos seus arquivos. Caso note que algum documento está demorando muito para processar, você pode deletá-lo e adicioná-lo novamente""",
+        """⚠️ **ATENÇÃO**: Fique atento ao **status de processamento** dos seus arquivos. 
+        Caso note que algum documento está demorando muito para processar, você pode deletá-lo e adicioná-lo novamente.""",
     )
 
 # Title
 st.title("Conhecimento 📚")
 st.divider()
 
+
+# Function to get status icon and color
+def get_status_display(status: str) -> tuple:
+    """Get status icon and color for display."""
+    if status == "pending":
+        return "⏳", "gray", "Pendente"
+    elif status == "processing":
+        return "🔄", "blue", "Processando"
+    elif status == "generating_embeddings":
+        return "🧠", "orange", "Gerando embeddings"
+    elif status == "completed":
+        return "✅", "green", "Concluído"
+    elif status == "error":
+        return "❌", "red", "Erro"
+    return "❓", "gray", "Desconhecido"
+
+
+# Function to update status in session state
+def update_status(status: DocumentProcessingStatus):
+    """Update document status in session state."""
+    if status.filename not in st.session_state.processing_status:
+        st.session_state.processing_status[status.filename] = {}
+
+    st.session_state.processing_status[status.filename].update(
+        {
+            "status": status.status,
+            "total_pages": status.total_pages,
+            "processed_pages": status.processed_pages,
+            "total_chunks": status.total_chunks,
+            "processed_chunks": status.processed_chunks,
+            "error": status.error,
+        }
+    )
+
+
+# Create new knowledge base section
 st.subheader("Criar Nova Base de Conhecimento")
 
-# Initialize session state for form data
-if "cliente" not in st.session_state:
-    st.session_state.cliente = ""
-if "referencia" not in st.session_state:
-    st.session_state.referencia = ""
-if "id_licitacao" not in st.session_state:
-    st.session_state.id_licitacao = ""
-if "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = None
+# Check number of existing indexes
+existing_indexes = knowledge.client.list_indexes()
+if len(existing_indexes) >= 5:
+    st.warning(
+        """⚠️ **Limite de bases de conhecimento atingido!**
+        
+        Você já possui 5 bases de conhecimento. Para criar uma nova, você precisará excluir uma das bases existentes.""",
+        icon="⚠️",
+    )
 
 # Form for new tender
 with st.container():
@@ -69,43 +116,44 @@ with st.container():
 
 # Submit button outside the form
 if uploaded_files:
-    submit_disabled = not (cliente and referencia and id_licitacao)
+    submit_disabled = (
+        not (cliente and referencia and id_licitacao) or len(existing_indexes) >= 5
+    )
     if st.button(
         "Criar Nova Base de Conhecimento",
         type="primary",
         disabled=submit_disabled,
         use_container_width=True,
     ):
-        dataset_name = f"_-_{cliente} - {referencia} - {id_licitacao}_-_"  # TODO: Use this as the namespace in Pinecone
+        # Format index name to be valid (lowercase, alphanumeric, hyphens)
+        formatted_name = f"{cliente}-{referencia}-{id_licitacao}".lower()
+        formatted_name = "".join(
+            c if c.isalnum() or c == "-" else "-" for c in formatted_name
+        )
+        formatted_name = "-".join(
+            filter(None, formatted_name.split("-"))
+        )  # Remove empty segments
 
         with st.spinner("Criando base de conhecimento..."):
             try:
-                # Create dataset
-                dataset_id = dify_client.create_dataset(
-                    name=dataset_name
-                )  # TODO: Remove this in Pinecone implementation
+                # Process documents
+                statuses = asyncio.run(
+                    knowledge.process_tender_documents(
+                        index_name=formatted_name,
+                        uploaded_files=uploaded_files,
+                        status_callback=update_status,
+                    )
+                )
 
-                # Upload files
-                for uploaded_file in uploaded_files:
-                    # Create a temporary file
-                    with tempfile.NamedTemporaryFile(
-                        delete=False, suffix=".pdf"
-                    ) as tmp_file:
-                        # Write the uploaded file to the temporary file
-                        tmp_file.write(uploaded_file.getvalue())
-                        tmp_file.flush()
-
-                        # Upload to Dify
-                        with open(tmp_file.name, "rb") as f:
-                            dify_client.upload_knowledge_file(
-                                f.read(), uploaded_file.name, dataset_id=dataset_id
-                            )  # TODO: Refactor. Split into chunks, generate embeddings with azure openai and upsert to Pinecone
-
-                        # Clean up the temporary file
-                        os.unlink(tmp_file.name)
-
-                st.success("Base de conhecimento criada com sucesso!")
-                st.rerun()
+                # Check for any errors
+                if any(s.status == "error" for s in statuses):
+                    error_docs = [s.filename for s in statuses if s.status == "error"]
+                    st.error(
+                        f"Erro ao processar os seguintes documentos: {', '.join(error_docs)}"
+                    )
+                else:
+                    st.success("Base de conhecimento criada com sucesso!")
+                    st.rerun()
 
             except Exception as e:
                 st.error(f"Erro ao criar base de conhecimento: {str(e)}")
@@ -114,111 +162,117 @@ else:
 
 st.divider()
 
-# List of existing datasets
+# List of existing knowledge bases
 st.subheader("Bases de Conhecimento")
 
 try:
-    # Fetch all datasets
-    datasets = (
-        dify_client.fetch_all_datasets()
-    )  # TODO: Implement fetch_all_namespaces method with Pinecone
+    # Fetch all indexes
+    indexes = knowledge.client.list_indexes()
 
-    if not datasets:
+    if not indexes:
         st.info("Nenhuma base de conhecimento encontrada")
     else:
-        for dataset in datasets:
-            # Get dataset status
-            status_type, status_icon, status_text = dify_client.get_dataset_status(
-                dataset["id"]
-            )  # TODO: Refactor - The indexing step must happen before upserting the vectors.
+        for index_name in indexes:
+            try:
+                # Get namespaces (documents) in this index
+                namespaces = knowledge.client.list_namespaces(index_name)
 
-            # Adjust column widths to minimize spacing between buttons
-            col1, col2, col3 = st.columns([0.9, 0.05, 0.05])
-            with col1:
-                # Extract tender name from dataset name (remove _-_ prefix/suffix)
-                tender_name = dataset["name"].replace("_-_", "").strip()
-
-                with st.expander(
-                    f"**Status**: {status_text} {status_icon}     •     **Id Licitação**: {tender_name}",
-                    expanded=False,
-                ):
-                    # Clean up description text
-                    description = f"Útil para buscar informações relevantes referentes à licitação: {tender_name}"
-                    st.caption(description)
-                    st.divider()
-
-                    # List files in dataset
-                    files = dify_client.list_dataset_files(
-                        dataset["id"]
-                    )  # TODO: Implement method for listing all files in a namespace. Filenames will have to be stored in the metadata
-
-                    if not files:
-                        st.info("Nenhum arquivo encontrado")
-                    else:
-                        for file in files:
-                            status_indicator = (
-                                dify_client.get_document_status_indicator(
-                                    file.get("indexing_status", "")
+                # Adjust column widths to minimize spacing between buttons
+                col1, col2, col3 = st.columns([0.9, 0.05, 0.05])
+                with col1:
+                    with st.expander(f"**{index_name}**", expanded=False):
+                        if not namespaces:
+                            st.info("Nenhum documento encontrado")
+                        else:
+                            for namespace in namespaces:
+                                # Get status from session state or default to completed
+                                doc_status = st.session_state.processing_status.get(
+                                    f"{namespace}.pdf", {"status": "completed"}
                                 )
-                            )
-                            error_msg = file.get("error", "")
+                                status_icon, status_color, status_text = (
+                                    get_status_display(doc_status["status"])
+                                )
 
-                            # Create a container for each document for consistent spacing
-                            with st.container():
-                                doc_cols = st.columns([0.05, 0.85, 0.1])
+                                # Create a container for each document
+                                with st.container():
+                                    doc_cols = st.columns([0.05, 0.85, 0.1])
 
-                                # Status icon
-                                with doc_cols[0]:
-                                    st.text(status_indicator)
+                                    # Status icon
+                                    with doc_cols[0]:
+                                        st.markdown(
+                                            f":{status_color}[{status_icon}]",
+                                            unsafe_allow_html=True,
+                                        )
 
-                                # Document name and error message
-                                with doc_cols[1]:
-                                    st.text(file["name"])
-                                    if error_msg:
-                                        st.caption(f"❗ {error_msg}")
-
-                                # Delete button
-                                with doc_cols[2]:
-                                    if st.button(
-                                        "🗑️",
-                                        key=f"delete_doc_{dataset['id']}_{file['id']}",
-                                        help="Excluir documento",
-                                    ):
-                                        try:
-                                            if dify_client.delete_document(
-                                                dataset["id"], file["id"]
-                                            ):
-                                                st.success(
-                                                    "Documento excluído com sucesso!"
+                                    # Document name and status
+                                    with doc_cols[1]:
+                                        st.text(f"{namespace}.pdf")
+                                        if doc_status["status"] == "error":
+                                            st.caption(f"❗ {doc_status['error']}")
+                                        elif doc_status["status"] in [
+                                            "processing",
+                                            "generating_embeddings",
+                                        ]:
+                                            progress = 0
+                                            if doc_status["status"] == "processing":
+                                                progress = (
+                                                    doc_status["processed_pages"]
+                                                    / doc_status["total_pages"]
                                                 )
-                                                st.rerun()
-                                        except Exception as e:
-                                            st.error(
-                                                f"Erro ao excluir documento: {str(e)}"
-                                            )
+                                            else:
+                                                progress = (
+                                                    doc_status["processed_chunks"]
+                                                    / doc_status["total_chunks"]
+                                                )
+                                            st.progress(progress, text=status_text)
 
-            with col2:
-                # Add files button with plus sign icon
-                if st.button(
-                    "➕",
-                    key=f"add_files_{dataset['id']}",
-                    help="Adicionar arquivos",
-                ):
-                    st.session_state.selected_dataset = dataset["id"]
-                    st.session_state.show_upload_form = True
+                                    # Delete button
+                                    with doc_cols[2]:
+                                        if st.button(
+                                            "🗑️",
+                                            key=f"delete_doc_{index_name}_{namespace}",
+                                            help="Excluir documento",
+                                        ):
+                                            try:
+                                                if knowledge.client.delete_namespace(
+                                                    index_name, namespace
+                                                ):
+                                                    st.success(
+                                                        "Documento excluído com sucesso!"
+                                                    )
+                                                    st.rerun()
+                                            except Exception as e:
+                                                st.error(
+                                                    f"Erro ao excluir documento: {str(e)}"
+                                                )
 
-            with col3:
-                if st.button(
-                    "🗑️",
-                    key=f"delete_{dataset['id']}",
-                    help="Excluir base de conhecimento",
-                ):
-                    try:
-                        if dify_client.delete_dataset(dataset["id"]):
-                            st.success("Base de conhecimento excluída com sucesso!")
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
+                with col2:
+                    # Add files button
+                    if st.button(
+                        "➕",
+                        key=f"add_files_{index_name}",
+                        help="Adicionar arquivos",
+                    ):
+                        st.session_state.selected_index = index_name
+                        st.session_state.show_upload_form = True
+
+                with col3:
+                    # Delete index button
+                    if st.button(
+                        "🗑️",
+                        key=f"delete_{index_name}",
+                        help="Excluir base de conhecimento",
+                    ):
+                        try:
+                            if knowledge.client.delete_index(index_name):
+                                st.success("Base de conhecimento excluída com sucesso!")
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
+
+            except Exception as e:
+                st.error(f"Erro ao carregar documentos da base {index_name}: {str(e)}")
+                continue
 
     # Add files form (shown when add_files button is clicked)
     if (
@@ -245,29 +299,27 @@ try:
                 ):
                     with st.spinner("Adicionando arquivos..."):
                         try:
-                            for uploaded_file in uploaded_files:
-                                # Create a temporary file
-                                with tempfile.NamedTemporaryFile(
-                                    delete=False, suffix=".pdf"
-                                ) as tmp_file:
-                                    # Write the uploaded file to the temporary file
-                                    tmp_file.write(uploaded_file.getvalue())
-                                    tmp_file.flush()
+                            # Process documents
+                            statuses = asyncio.run(
+                                knowledge.process_tender_documents(
+                                    index_name=st.session_state.selected_index,
+                                    uploaded_files=uploaded_files,
+                                    status_callback=update_status,
+                                )
+                            )
 
-                                    # Upload to Dify
-                                    with open(tmp_file.name, "rb") as f:
-                                        dify_client.upload_knowledge_file(
-                                            f.read(),
-                                            uploaded_file.name,
-                                            dataset_id=st.session_state.selected_dataset,
-                                        )
-
-                                    # Clean up the temporary file
-                                    os.unlink(tmp_file.name)
-
-                            st.success("Arquivos adicionados com sucesso!")
-                            st.session_state.show_upload_form = False
-                            st.rerun()
+                            # Check for any errors
+                            if any(s.status == "error" for s in statuses):
+                                error_docs = [
+                                    s.filename for s in statuses if s.status == "error"
+                                ]
+                                st.error(
+                                    f"Erro ao processar os seguintes documentos: {', '.join(error_docs)}"
+                                )
+                            else:
+                                st.success("Arquivos adicionados com sucesso!")
+                                st.session_state.show_upload_form = False
+                                st.rerun()
 
                         except Exception as e:
                             st.error(f"Erro ao adicionar arquivos: {str(e)}")
