@@ -47,9 +47,11 @@ def copy_to_clipboard(text):
     st.components.v1.html(html_code, height=0)
 
 
+# TODO: Replace Dify with Pinecone
 # Create DifyClient instance
 dify_client = DifyClient()
 
+# TODO: Update code to use the new Pinecone implementation
 # Sidebar - Available Tenders
 with st.sidebar:
     st.info(
