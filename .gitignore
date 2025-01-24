@@ -3,6 +3,7 @@ scratchpad.ipynb
 *pycache*
 *cache*
 temp/
+archive/
 exemplos/
 .DS_Store
 src/tender_analysis_crew/outputs

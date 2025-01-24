@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
-from src.dify_client import DifyClient
+
+# from src.dify_client import DifyClient
 
 
 # Configure page
@@ -48,38 +49,48 @@ def copy_to_clipboard(text):
 
 
 # Create DifyClient instance
-dify_client = DifyClient()
+# dify_client = DifyClient()
 
 # Sidebar - Available Tenders
 with st.sidebar:
-    st.info(
-        "💡 **DICA**: Clique abaixo na licitação desejada para copiar seu Id, depois cole ao lado no campo **'id_licitacao_atual'** antes de iniciar a conversa."
+    # st.info(
+    #     "💡 **DICA**: Clique abaixo na licitação desejada para copiar seu Id, depois cole ao lado no campo **'id_licitacao_atual'** antes de iniciar a conversa."
+    # )
+    st.warning(
+        """⚠️ **ATENÇÃO**:
+               Esse é um protótipo com capacidades limitadas
+               """
     )
-    st.subheader("Licitações Disponíveis")
-    try:
-        datasets = dify_client.fetch_all_datasets()
-        if datasets:
-            for dataset in datasets:
-                dataset_name = dataset["name"].replace("_-_", "")
-                # Get dataset status
-                status_type, status_icon, _ = dify_client.get_dataset_status(
-                    dataset["id"]
-                )
+    st.info(
+        """
+        O assistente foi alimentado apenas com informações da licitação **Sanepar ETE Faxinal 271-2024**.
+        """
+    )
+    # st.subheader("Licitações Disponíveis")
+    # try:
+    #     datasets = dify_client.fetch_all_datasets()
+    #     if datasets:
+    #         for dataset in datasets:
+    #             dataset_name = dataset["name"].replace("_-_", "")
+    #             # Get dataset status
+    #             status_type, status_icon, _ = dify_client.get_dataset_status(
+    #                 dataset["id"]
+    #             )
 
-                # Create button with status icon
-                button_label = f"{status_icon} {dataset_name}"
-                if st.button(button_label, type="tertiary"):
-                    copy_to_clipboard(dataset_name)
-                    st.toast("Texto copiado para a área de transferência!", icon="✅")
-        else:
-            st.warning("Nenhuma licitação disponível.")
-            st.info(
-                "Crie uma nova base de conhecimento para começar, ou prossiga assim mesmo, clicando em 'Iniciar Conversa' ao lado, sem preencher o id da licitação ."
-            )
+    #             # Create button with status icon
+    #             button_label = f"{status_icon} {dataset_name}"
+    #             if st.button(button_label, type="tertiary"):
+    #                 copy_to_clipboard(dataset_name)
+    #                 st.toast("Texto copiado para a área de transferência!", icon="✅")
+    #     else:
+    #         st.warning("Nenhuma licitação disponível.")
+    #         st.info(
+    #             "Crie uma nova base de conhecimento para começar, ou prossiga assim mesmo, clicando em 'Iniciar Conversa' ao lado, sem preencher o id da licitação ."
+    #         )
 
-    except Exception as e:
-        st.error("Erro ao carregar licitações disponíveis.")
-        st.error(str(e))
+    # except Exception as e:
+    #     st.error("Erro ao carregar licitações disponíveis.")
+    #     st.error(str(e))
 
 st.title("Assistente de Licitações 💬")
 st.divider()

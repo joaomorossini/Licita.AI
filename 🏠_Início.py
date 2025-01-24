@@ -73,26 +73,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown(
-        """
-        **📚 Conhecimento**: Gerencie o conhecimento relacionado a cada licitação
+st.markdown(
+    """
 
         **📋 Resumos**: Resumo de licitação
 
         **📄 Assistente**: Chat inteligente para análise de editais
-        """
-    )
 
-with col2:
-    st.markdown(
-        """
         **📰 Boletins**: Acompanhamento de boletins de licitação (*Em construção*)
 
         **📊 Dashboard**: Visualização de métricas e insights (*Em construção*)
 
         **🗣️ Feedback**: Envie seu feedback para melhorarmos a plataforma
         """
-    )
+)
