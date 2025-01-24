@@ -14,7 +14,7 @@ current_time = datetime.now().strftime("%Y-%m-%d_%H-%M")
 montagem_de_cronograma = Task(
     description=dedent(
         """
-        Organizar todos os prazos e datas relevantes do edital, construindo um cronograma em formato de tabela ou bullet points (desde abertura da licitação até encerramento do contrato).
+        Selecionar e organizar os prazos e datas MAIS RELEVANTES do edital, sob o ponto de vista de uma empresa decidindo sobre participar ou não da licitação, construindo um cronograma em formato de tabela ou bullet points (desde abertura da licitação até encerramento do contrato).
 
         Dados de entrada:
         {cronograma_sections}
@@ -85,12 +85,6 @@ compilacao_de_relatorio = Task(
         - [...]
 
         ### Econômico financeiro
-        - [...]
-
-        ### Riscos
-        - [...]
-
-        ### Oportunidades
         - [...]
 
         ### Outros requisitos
