@@ -72,7 +72,7 @@ class TenderKnowledgeUtils:
                     for doc in documents:
                         processed_docs.append(
                             {
-                                "content": doc.page_content,
+                                "page_content": doc.page_content,
                                 "metadata": {
                                     "filename": filename,
                                     "page_number": doc.metadata.get("page", 0) + 1,
