@@ -19,6 +19,7 @@ plotly = "*"
 python-dotenv = "*"
 aiohttp = "*"
 
+rootpath = "^0.1.1"
 [tool.poetry.group.dev.dependencies]
 responses = "*"
 
