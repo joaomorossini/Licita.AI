@@ -7,30 +7,23 @@ readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.13"
 streamlit = "^1.41.1"
-pytest = "*"
-requests = "*"
-python-dotenv = "*"
-crewai = "*"
-crewai-tools = "*"
-chardet = "*"
-markdown = "*"
-weasyprint = "*"
-docx = "*"
-langchain = "*"
-langchain-community = "*"
-langchain_core = "*"
+langchain = ">=0.2,<0.3"
 langchain_openai = "*"
+crewai = ">=0.60"
+crewai-tools = "*"
 pypdf = "*"
-plotly = "*"
 pandas = "*"
+plotly = "*"
+python-dotenv = "*"
+aiohttp = "*"
 
 [tool.poetry.group.dev.dependencies]
 responses = "*"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
