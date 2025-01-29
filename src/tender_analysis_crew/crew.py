@@ -277,12 +277,13 @@ class TenderAnalysisCrew:
         start_time = time.time()
         logger.debug("Generating summary")
 
-        # Create execution times log file
-        execution_log_path = f"src/tender_analysis_crew/outputs/execution_times_logs-{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log"
-        with open(execution_log_path, "w") as log_file:
-            log_file.write(
-                f"Execution started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-            )
+        if os.getenv("ENVIRONMENT") == "dev":
+            # Create execution times log file
+            execution_log_path = f"src/tender_analysis_crew/outputs/execution_times_logs-{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log"
+            with open(execution_log_path, "w") as log_file:
+                log_file.write(
+                    f"Execution started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                )
 
             # Split text into chunks
             split_start = time.time()
