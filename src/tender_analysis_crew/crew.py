@@ -285,28 +285,28 @@ class TenderAnalysisCrew:
                     f"Execution started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
                 )
 
-            # Split text into chunks
-            split_start = time.time()
-            chunks = self.utils.split_text(tender_documents_text)
-            split_time = time.time() - split_start
-            logger.debug(f"Split text into {len(chunks)} chunks")
-            log_file.write(f"Text splitting time: {split_time:.2f} seconds\n")
-            log_file.write(f"Number of chunks: {len(chunks)}\n\n")
+        # Split text into chunks
+        split_start = time.time()
+        chunks = self.utils.split_text(tender_documents_text)
+        split_time = time.time() - split_start
+        logger.debug(f"Split text into {len(chunks)} chunks")
+        log_file.write(f"Text splitting time: {split_time:.2f} seconds\n")
+        log_file.write(f"Number of chunks: {len(chunks)}\n\n")
 
-            # Process chunks in batches
-            chunk_results = []
-            processed_chunks = 0
-            total_chunks = len(chunks)
+        # Process chunks in batches
+        chunk_results = []
+        processed_chunks = 0
+        total_chunks = len(chunks)
 
-            # Process chunks in batches of max_concurrent_chunks
-            for i in range(0, total_chunks, max_concurrent_chunks):
-                batch = chunks[i : i + max_concurrent_chunks]
-                batch_tasks = []
+        # Process chunks in batches of max_concurrent_chunks
+        for i in range(0, total_chunks, max_concurrent_chunks):
+            batch = chunks[i : i + max_concurrent_chunks]
+            batch_tasks = []
 
-                # Create tasks for the current batch
-                for chunk in batch:
-                    task = asyncio.create_task(self._extract_and_label_sections(chunk))
-                    batch_tasks.append(task)
+            # Create tasks for the current batch
+            for chunk in batch:
+                task = asyncio.create_task(self._extract_and_label_sections(chunk))
+                batch_tasks.append(task)
 
                 # Wait for the current batch to complete
                 batch_results = await asyncio.gather(*batch_tasks)
