@@ -20,6 +20,7 @@ python-dotenv = "*"
 aiohttp = "*"
 
 rootpath = "^0.1.1"
+langchain-community = ">=0.2,<0.3"
 [tool.poetry.group.dev.dependencies]
 responses = "*"
 
