@@ -2,6 +2,8 @@ from typing import Optional
 import streamlit as st
 import rootpath
 import asyncio
+import os
+import logging
 
 rootpath.append()
 
@@ -76,6 +78,8 @@ if "show_preview" not in st.session_state:
     st.session_state.show_preview = True
 if "processing_status" not in st.session_state:
     st.session_state.processing_status = None
+if "error_details" not in st.session_state:
+    st.session_state.error_details = None
 
 st.title("Resumo de Licitação 📋")
 st.divider()
@@ -93,16 +97,18 @@ with st.sidebar:
         st.success(f"{len(uploaded_files)} arquivo(s) recebido(s)")
 
         if st.button("⬆️ Carregar", type="primary", use_container_width=True):
+            # Reset all states
             st.session_state.summary = None
             st.session_state.labeled_sections = None
             st.session_state.filtered_sections = None
             st.session_state.processing_status = None
+            st.session_state.error_details = None
+            
             with st.spinner("Carregando documentos..."):
                 try:
                     # Load PDFs and store in session state
-                    st.session_state.tender_pdfs = utils.load_pdfs_to_docs(
-                        uploaded_files
-                    )
+                    st.session_state.tender_pdfs = utils.load_pdfs_to_docs(uploaded_files)
+                    
                     if st.session_state.tender_pdfs:
                         # Convert documents to text
                         st.session_state.tender_documents_text = utils.concatenate_docs(
@@ -111,26 +117,31 @@ with st.sidebar:
                         st.toast("Documentos carregados com sucesso!", icon="✅")
                     else:
                         st.error("Nenhum documento foi processado com sucesso.")
+                        logger.error("No documents were successfully processed")
                 except Exception as e:
-                    st.error(f"Erro ao processar os documentos: {str(e)}")
+                    error_msg = f"Erro ao processar os documentos: {str(e)}"
+                    st.error(error_msg)
+                    logger.error(error_msg, exc_info=True)
+                    st.session_state.error_details = str(e)
 
 # Main content area
 # Preview section
-with st.expander(
-    "🔍 Pré-Visualização dos Documentos", expanded=st.session_state.show_preview
-):
+with st.expander("🔍 Pré-Visualização dos Documentos", expanded=st.session_state.show_preview):
     with st.container(height=400, border=True):
         if st.session_state.get("tender_documents_text"):
-            # Add text length information
-            total_chars = len(st.session_state.tender_documents_text)
-            total_tokens = utils._length_function(
-                st.session_state.tender_documents_text
-            )
-            chunks = utils.split_text(st.session_state.tender_documents_text)
-            st.caption(
-                f"📊 Estatísticas do Documento: {total_chars:,} caracteres • {total_tokens} tokens • {len(chunks)} chunks"
-            )
-            st.markdown(st.session_state.tender_documents_text)
+            try:
+                # Add text length information
+                total_chars = len(st.session_state.tender_documents_text)
+                total_tokens = utils._length_function(st.session_state.tender_documents_text)
+                chunks = utils.split_text(st.session_state.tender_documents_text)
+                st.caption(
+                    f"📊 Estatísticas do Documento: {total_chars:,} caracteres • {total_tokens} tokens • {len(chunks)} chunks"
+                )
+                st.markdown(st.session_state.tender_documents_text)
+            except Exception as e:
+                error_msg = f"Erro ao exibir pré-visualização: {str(e)}"
+                st.error(error_msg)
+                logger.error(error_msg, exc_info=True)
         else:
             st.info("👈 Faça upload dos documentos no painel lateral para começar.")
 
@@ -141,6 +152,9 @@ if st.button(
     use_container_width=True,
     disabled=not st.session_state.get("tender_documents_text"),
 ):
+    # Reset error state
+    st.session_state.error_details = None
+    
     # Create a placeholder for the progress bar
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -157,12 +171,15 @@ if st.button(
 
             def update_progress(current_chunk: int):
                 """Update progress bar and status text"""
-                progress = float(current_chunk) / total_chunks
-                progress_bar.progress(progress)
-                st.session_state.processing_status = (
-                    f"Processando chunk {current_chunk}/{total_chunks}"
-                )
-                status_text.text(st.session_state.processing_status)
+                try:
+                    progress = float(current_chunk) / total_chunks
+                    progress_bar.progress(progress)
+                    st.session_state.processing_status = (
+                        f"Processando chunk {current_chunk}/{total_chunks}"
+                    )
+                    status_text.text(st.session_state.processing_status)
+                except Exception as e:
+                    logger.error(f"Error updating progress: {str(e)}", exc_info=True)
 
             # Generate summary with progress updates
             st.session_state.summary = asyncio.run(
@@ -179,7 +196,10 @@ if st.button(
             st.toast("Resumo gerado com sucesso!", icon="✅")
 
         except Exception as e:
-            st.error(f"Erro ao gerar resumo: {str(e)}")
+            error_msg = f"Erro ao gerar resumo: {str(e)}"
+            st.error(error_msg)
+            logger.error(error_msg, exc_info=True)
+            st.session_state.error_details = str(e)
         finally:
             # Clean up progress display
             progress_bar.empty()
@@ -188,3 +208,8 @@ if st.button(
 if st.session_state.summary:
     st.markdown("### 📄 Resumo")
     st.markdown(st.session_state.summary)
+
+# Display detailed error information if available
+if st.session_state.error_details and os.getenv("ENVIRONMENT") == "dev":
+    with st.expander("🐛 Detalhes do Erro"):
+        st.code(st.session_state.error_details)

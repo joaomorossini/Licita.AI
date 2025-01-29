@@ -275,68 +275,79 @@ class TenderAnalysisCrew:
             str: The generated summary
         """
         start_time = time.time()
-        logger.debug("Generating summary")
+        logger.info("Starting summary generation")
 
-        if os.getenv("ENVIRONMENT") == "dev":
-            # Create execution times log file
-            execution_log_path = f"src/tender_analysis_crew/outputs/execution_times_logs-{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log"
-            with open(execution_log_path, "w") as log_file:
-                log_file.write(
-                    f"Execution started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                )
+        # Initialize timing metrics
+        timing_metrics = {
+            "split_time": 0,
+            "batch_processing_time": 0,
+            "combine_time": 0,
+            "filter_time": 0,
+            "format_time": 0,
+            "crew_time": 0
+        }
 
-        # Split text into chunks
-        split_start = time.time()
-        chunks = self.utils.split_text(tender_documents_text)
-        split_time = time.time() - split_start
-        logger.debug(f"Split text into {len(chunks)} chunks")
-        log_file.write(f"Text splitting time: {split_time:.2f} seconds\n")
-        log_file.write(f"Number of chunks: {len(chunks)}\n\n")
+        try:
+            # Split text into chunks
+            split_start = time.time()
+            chunks = self.utils.split_text(tender_documents_text)
+            timing_metrics["split_time"] = time.time() - split_start
+            logger.info(f"Split text into {len(chunks)} chunks in {timing_metrics['split_time']:.2f} seconds")
 
-        # Process chunks in batches
-        chunk_results = []
-        processed_chunks = 0
-        total_chunks = len(chunks)
+            # Process chunks in batches
+            chunk_results = []
+            processed_chunks = 0
+            total_chunks = len(chunks)
+            batch_start = time.time()
 
-        # Process chunks in batches of max_concurrent_chunks
-        for i in range(0, total_chunks, max_concurrent_chunks):
-            batch = chunks[i : i + max_concurrent_chunks]
-            batch_tasks = []
+            # Process chunks in batches of max_concurrent_chunks
+            for i in range(0, total_chunks, max_concurrent_chunks):
+                batch = chunks[i : i + max_concurrent_chunks]
+                batch_tasks = []
 
-            # Create tasks for the current batch
-            for chunk in batch:
-                task = asyncio.create_task(self._extract_and_label_sections(chunk))
-                batch_tasks.append(task)
+                # Create tasks for the current batch
+                for chunk in batch:
+                    task = asyncio.create_task(self._extract_and_label_sections(chunk))
+                    batch_tasks.append(task)
 
-                # Wait for the current batch to complete
-                batch_results = await asyncio.gather(*batch_tasks)
-                chunk_results.extend(batch_results)
+                try:
+                    # Wait for the current batch to complete
+                    batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+                    
+                    # Handle any exceptions from batch processing
+                    for result in batch_results:
+                        if isinstance(result, Exception):
+                            logger.error(f"Error processing batch: {str(result)}")
+                            raise result
+                        
+                    chunk_results.extend(batch_results)
 
-                # Update progress for completed chunks
-                processed_chunks += len(batch)
-                if progress_callback:
-                    progress_callback(min(processed_chunks, total_chunks))
+                    # Update progress for completed chunks
+                    processed_chunks += len(batch)
+                    if progress_callback:
+                        progress_callback(min(processed_chunks, total_chunks))
 
-                # Log processing time for the batch
-                batch_time = time.time() - start_time
-                log_file.write(
-                    f"Batch {i//max_concurrent_chunks + 1} processing time: {batch_time:.2f} seconds\n"
-                )
+                    logger.debug(f"Processed batch {i//max_concurrent_chunks + 1}/{(total_chunks + max_concurrent_chunks - 1)//max_concurrent_chunks}")
+                except Exception as e:
+                    logger.error(f"Error processing batch {i//max_concurrent_chunks + 1}: {str(e)}")
+                    raise
+
+            timing_metrics["batch_processing_time"] = time.time() - batch_start
+            logger.info(f"Processed all chunks in {timing_metrics['batch_processing_time']:.2f} seconds")
 
             # Combine results from all chunks
             combine_start = time.time()
             labeled_sections = self._combine_labeled_sections(chunk_results)
-            combine_time = time.time() - combine_start
-            logger.debug("Combined results from all chunks")
-            log_file.write(f"\nCombining results time: {combine_time:.2f} seconds\n")
+            timing_metrics["combine_time"] = time.time() - combine_start
+            logger.info(f"Combined results in {timing_metrics['combine_time']:.2f} seconds")
 
             # Filter sections by category
             filter_start = time.time()
             filtered_sections = self._filter_sections_by_category(labeled_sections)
-            filter_time = time.time() - filter_start
-            log_file.write(f"Filtering sections time: {filter_time:.2f} seconds\n")
+            timing_metrics["filter_time"] = time.time() - filter_start
+            logger.info(f"Filtered sections in {timing_metrics['filter_time']:.2f} seconds")
 
-            # Rest of the processing
+            # Format sections
             format_start = time.time()
             overview_str = f"""
             Cliente: {labeled_sections['overview']['client_name']}
@@ -349,35 +360,25 @@ class TenderAnalysisCrew:
             for category, sections in {
                 k: v
                 for k, v in filtered_sections.items()
-                if k
-                in [
-                    "requisitos_tecnicos",
-                    "economicos_financeiros",
-                    "oportunidades",
-                    "outros_requisitos",
-                ]
+                if k in ["requisitos_tecnicos", "economicos_financeiros", "oportunidades", "outros_requisitos"]
             }.items():
                 if sections:
                     technical_sections_str += f"\n{category.upper()}:\n"
-                    technical_sections_str += "\n".join(
-                        self._format_section(s) for s in sections
-                    )
+                    technical_sections_str += "\n".join(self._format_section(s) for s in sections)
 
             cronograma_sections_str = "Seções de Cronograma:\n"
             cronograma_sections_str += "\n".join(
-                self._format_section(s)
-                for s in filtered_sections["prazos_e_cronograma"]
+                self._format_section(s) for s in filtered_sections["prazos_e_cronograma"]
             )
 
             all_sections_str = "Todas as Seções:\n"
             for category, sections in filtered_sections.items():
                 if sections:
                     all_sections_str += f"\n{category.upper()}:\n"
-                    all_sections_str += "\n".join(
-                        self._format_section(s) for s in sections
-                    )
-            format_time = time.time() - format_start
-            log_file.write(f"Formatting sections time: {format_time:.2f} seconds\n")
+                    all_sections_str += "\n".join(self._format_section(s) for s in sections)
+
+            timing_metrics["format_time"] = time.time() - format_start
+            logger.info(f"Formatted sections in {timing_metrics['format_time']:.2f} seconds")
 
             # Prepare and execute crew tasks
             crew_start = time.time()
@@ -388,14 +389,33 @@ class TenderAnalysisCrew:
                 "overview": overview_str,
             }
 
-            logger.debug("Crew input prepared for kickoff")
+            logger.info("Starting crew execution")
             summary = self.crew.kickoff(inputs=crew_input)
-            crew_time = time.time() - crew_start
-            log_file.write(f"Crew execution time: {crew_time:.2f} seconds\n")
+            timing_metrics["crew_time"] = time.time() - crew_start
+            logger.info(f"Crew execution completed in {timing_metrics['crew_time']:.2f} seconds")
 
-            # Total execution time
+            # Log total execution time and return summary
             total_time = time.time() - start_time
-            log_file.write(f"\nTotal execution time: {total_time:.2f} seconds\n")
+            logger.info(f"Total summary generation time: {total_time:.2f} seconds")
 
-        logger.debug("Summary generated")
-        return summary
+            # If in dev environment, write detailed timing metrics to file
+            if self.env == "dev":
+                log_dir = "src/tender_analysis_crew/outputs"
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, f"execution_times_logs-{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log")
+                
+                with open(log_path, "w") as log_file:
+                    log_file.write(f"Execution started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    log_file.write(f"Text splitting time: {timing_metrics['split_time']:.2f} seconds\n")
+                    log_file.write(f"Batch processing time: {timing_metrics['batch_processing_time']:.2f} seconds\n")
+                    log_file.write(f"Combining results time: {timing_metrics['combine_time']:.2f} seconds\n")
+                    log_file.write(f"Filtering sections time: {timing_metrics['filter_time']:.2f} seconds\n")
+                    log_file.write(f"Formatting sections time: {timing_metrics['format_time']:.2f} seconds\n")
+                    log_file.write(f"Crew execution time: {timing_metrics['crew_time']:.2f} seconds\n")
+                    log_file.write(f"\nTotal execution time: {total_time:.2f} seconds\n")
+
+            return summary
+
+        except Exception as e:
+            logger.error(f"Error in generate_summary: {str(e)}", exc_info=True)
+            raise
