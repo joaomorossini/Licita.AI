@@ -21,6 +21,7 @@ aiohttp = "*"
 
 rootpath = "^0.1.1"
 langchain-community = ">=0.2,<0.3"
+xlsxwriter = "^3.2.2"
 [tool.poetry.group.dev.dependencies]
 responses = "*"
 

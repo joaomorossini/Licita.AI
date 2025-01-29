@@ -47,3 +47,11 @@ Licita.AI/
     ├── chat_com_edital.py  # Chat interface
     └── dify_client.py  # Dify API client
 ```
+
+---
+
+### Poetry Export Command!
+
+```bash
+export POETRY_VIRTUALENVS_PATH=/Users/morossini/anaconda3/envs/licita-ai-new
+```
