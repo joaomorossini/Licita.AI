@@ -15,6 +15,7 @@ from src.tender_analysis_crew.crew import TenderAnalysisCrew, TenderAnalysisUtil
 
 crew = TenderAnalysisCrew()
 utils = TenderAnalysisUtils()
+logger = logging.getLogger(__name__)
 
 # Configure page
 st.set_page_config(
