@@ -5,8 +5,10 @@ from datetime import datetime, timedelta
 import pandas as pd
 import tempfile
 import os
-from langchain.chat_models import AzureChatOpenAI
+from langchain_community.chat_models import AzureChatOpenAI
 import io
+import asyncio
+from tempfile import NamedTemporaryFile
 
 from src.tender_notice_labeling.tender_notice_processor import TenderNoticeProcessor
 from src.tender_notice_labeling.tender_notice_labeling_template import (
@@ -74,7 +76,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Boletins de Oportunidades 📰💰")
+st.title("📰 Processamento de Boletins")
 st.divider()
 
 # Initialize session state
@@ -125,10 +127,9 @@ with st.sidebar:
     # File upload section
     st.markdown("### 📤 Upload de Arquivos")
     uploaded_files = st.file_uploader(
-        "Faça upload dos boletins em formato PDF",
-        type=["pdf"],
-        accept_multiple_files=True,
-        help="Selecione os arquivos PDF dos boletins que deseja analisar",
+        "Selecione os boletins para processar (PDF)",
+        type=['pdf'],
+        accept_multiple_files=True
     )
 
     if uploaded_files:
@@ -169,90 +170,117 @@ with st.sidebar:
         disabled=not uploaded_files,
     )
 
+async def process_pdfs(files):
+    """Process multiple PDFs asynchronously."""
+    try:
+        # Initialize Azure OpenAI
+        llm = AzureChatOpenAI(
+            model="gpt-4o-mini",
+            azure_deployment="gpt-4o-mini",
+            temperature=0
+        )
+        
+        # Initialize processor
+        processor = TenderNoticeProcessor(llm=llm, batch_size=5)
+        
+        # Process each PDF
+        all_tenders = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i, file in enumerate(files):
+            try:
+                # Save uploaded file temporarily
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    tmp_file.write(file.getvalue())
+                    tmp_path = tmp_file.name
+                
+                try:
+                    # Update status
+                    status_text.text(f"Processando {file.name}...")
+                    
+                    # Process PDF
+                    df = await processor.process_pdf(
+                        pdf_path=tmp_path,
+                        template=tender_notice_labeling_template,
+                        company_description=company_business_description,
+                        max_concurrent_chunks=5
+                    )
+                    
+                    if not df.empty:
+                        # Add source information
+                        df['source_file'] = file.name
+                        df['processed_at'] = datetime.now()
+                        all_tenders.append(df)
+                    
+                finally:
+                    # Clean up temp file
+                    os.unlink(tmp_path)
+                
+            except Exception as e:
+                st.error(f"Erro ao processar {file.name}: {str(e)}")
+                if os.getenv("ENVIRONMENT") == "dev":
+                    st.exception(e)
+                continue
+            
+            # Update progress
+            progress = (i + 1) / len(files)
+            progress_bar.progress(progress)
+        
+        # Clear progress indicators
+        progress_bar.empty()
+        status_text.empty()
+        
+        # Combine all results
+        if all_tenders:
+            df = pd.concat(all_tenders, ignore_index=True)
+            
+            # Map labels to display values with emojis
+            label_map = {
+                'yes': '✅ Participar',
+                'no': '❌ Não participar',
+                'unsure': '🤔 Talvez'
+            }
+            df['label'] = df['label'].map(label_map)
+            
+            return df
+            
+        return pd.DataFrame()
+        
+    except Exception as e:
+        st.error(f"Erro ao processar os boletins: {str(e)}")
+        if os.getenv("ENVIRONMENT") == "dev":
+            st.exception(e)
+        return pd.DataFrame()
+
 # Main content area
 if process_button and uploaded_files:
     with st.spinner("Processando boletins..."):
-        try:
-            # Initialize Azure OpenAI
-            llm = AzureChatOpenAI(
-                model_name="gpt-4o-mini",
-                temperature=0,
-            )
-            
-            # Initialize processor
-            processor = TenderNoticeProcessor(llm=llm)
-            
-            # Process each PDF
-            all_tenders = []
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            for i, file in enumerate(uploaded_files):
-                try:
-                    # Save uploaded file temporarily
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                        tmp_file.write(file.getvalue())
-                        tmp_path = tmp_file.name
-                    
-                    try:
-                        # Update status
-                        status_text.text(f"Processando {file.name}...")
-                        
-                        # Process PDF
-                        df = processor.process_pdf(
-                            tmp_path,
-                            template=tender_notice_labeling_template,
-                            company_description=company_business_description,
-                        )
-                        all_tenders.append(df)
-                        
-                    finally:
-                        # Clean up temp file
-                        os.unlink(tmp_path)
-                    
-                except Exception as e:
-                    st.error(f"Erro ao processar {file.name}: {str(e)}")
-                    if os.getenv("ENVIRONMENT") == "dev":
-                        st.exception(e)
-                    continue
-                
-                # Update progress
-                progress = (i + 1) / len(uploaded_files)
-                progress_bar.progress(progress)
-            
-            # Combine all results
-            if all_tenders:
-                st.session_state.processed_tenders = pd.concat(all_tenders, ignore_index=True)
-                st.toast("Processamento concluído com sucesso!", icon="✅")
-            else:
-                st.error("Nenhum boletim foi processado com sucesso.")
-            
-            # Clear progress indicators
-            progress_bar.empty()
-            status_text.empty()
-            
-        except Exception as e:
-            st.error(f"Erro ao processar os boletins: {str(e)}")
-            if os.getenv("ENVIRONMENT") == "dev":
-                st.exception(e)
+        # Run async processing
+        st.session_state.processed_tenders = asyncio.run(process_pdfs(uploaded_files))
+        
+        if not st.session_state.processed_tenders.empty:
+            st.toast("Processamento concluído com sucesso!", icon="✅")
+        else:
+            st.error("Nenhum boletim foi processado com sucesso.")
                 
 # Display results
-if st.session_state.processed_tenders is not None:
-    st.subheader("Resultados")
+if st.session_state.processed_tenders is not None and not st.session_state.processed_tenders.empty:
+    # Display statistics
+    total = len(st.session_state.processed_tenders)
+    relevant = len(st.session_state.processed_tenders[st.session_state.processed_tenders['label'].str.contains('Participar')])
+    maybe = len(st.session_state.processed_tenders[st.session_state.processed_tenders['label'].str.contains('Talvez')])
     
-    # Apply filters
-    df = st.session_state.processed_tenders.copy()
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total de Licitações", total)
+    with col2:
+        st.metric("Licitações Relevantes", relevant)
+    with col3:
+        st.metric("Necessitam Análise", maybe)
     
-    # Map labels to display values and colors with emojis
-    label_map_with_emojis = {
-        "yes": "✅ Participar",
-        "unsure": "🤔 Talvez",
-        "no": "❌ Não Participar"
-    }
-    display_df = df.copy()
-    display_df["label"] = df["label"].map(label_map_with_emojis)
-    
-    # Display the table with custom styling
+    # Show DataFrame with specific columns and formatting
+    display_df = st.session_state.processed_tenders.copy()
     st.dataframe(
         display_df,
         use_container_width=True,
@@ -264,7 +292,7 @@ if st.session_state.processed_tenders is not None:
                 width="medium",
             ),
             "state": st.column_config.TextColumn(
-                "UF",
+                "Estado",
                 help="Estado",
                 width="small",
             ),
@@ -300,29 +328,12 @@ if st.session_state.processed_tenders is not None:
         ],
     )
     
-    # Download buttons
-    with st.container():
-        col1, col2 = st.columns([0.5, 0.5], gap="small")
-        with col1:
-            # Use original df for downloads to keep all fields
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Baixar CSV",
-                data=csv,
-                file_name="licitacoes.csv",
-                mime="text/csv",
-            )
-        
-        with col2:
-            # Create Excel file in memory
-            excel_buffer = io.BytesIO()
-            with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Licitações')
-            excel_data = excel_buffer.getvalue()
-            
-            st.download_button(
-                label="📥 Baixar Excel",
-                data=excel_data,
-                file_name="licitacoes.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
+    # Download button with semicolon separator
+    if st.download_button(
+        "📥 Baixar Resultados (CSV)",
+        display_df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig'),
+        "resultados_licitacoes.csv",
+        "text/csv",
+        key='download-csv'
+    ):
+        st.success("Download iniciado!")

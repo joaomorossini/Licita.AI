@@ -1,16 +1,20 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 import re
 from dataclasses import dataclass
 from datetime import datetime
 import pandas as pd
-from langchain_community.document_loaders import PyPDFLoader
+from pdfminer.high_level import extract_text
 from langchain_community.chat_models import AzureChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import logging
+import asyncio
+from tqdm.asyncio import tqdm_asyncio
+import streamlit as st
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging to only show INFO and above
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @dataclass
 class TenderNotice:
@@ -33,8 +37,9 @@ class TenderNotice:
 class TenderNoticeProcessor:
     """Processes tender notices from email PDFs."""
     
-    def __init__(self, llm: AzureChatOpenAI):
+    def __init__(self, llm: AzureChatOpenAI, batch_size: int = 5):
         self.llm = llm
+        self.batch_size = batch_size
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=2000,
             chunk_overlap=200,
@@ -42,163 +47,294 @@ class TenderNoticeProcessor:
         )
         
     def _extract_tender_blocks(self, text: str) -> List[str]:
-        """Extracts individual tender blocks from the email text using regex to identify headers."""
-        # Debug: Print the raw text being processed
-        print("\nRaw text being processed:")
-        print(text)
-
-        # Split the raw text into individual tenders based on known patterns
-        tender_entries = re.split(r'\n(?=[A-Z].+ \(\d+/\d+\))', text.strip())
+        """Extracts individual tender blocks from the email text."""
+        logging.info("Starting tender block extraction")
         
-        # Remove header text (everything before the first tender entry)
-        if len(tender_entries) > 0 and not re.search(r'^[A-Z].+ \(\d+/\d+\)', tender_entries[0]):
-            tender_entries = tender_entries[1:]
+        # Clean the text (preserve structure)
+        text = text.replace('\\n', '\n')   # Fix escaped newlines
+        text = re.sub(r'\n\s+', '\n', text)  # Remove leading spaces after newlines
+        text = re.sub(r'[ \t]+', ' ', text)  # Normalize horizontal whitespace only
         
-        # Debug: Print the resulting blocks
-        print("\nResulting tender blocks:")
-        for i, block in enumerate(tender_entries):
-            print(f"Block {i + 1}: {block}\n")
+        # Log the first 500 chars to see the structure
+        logging.info(f"First 500 chars after cleaning: {text[:500]}")
         
-        print(f"Split into {len(tender_entries)} tender entries.")
+        # Primary pattern: Look for blocks that start with organization and contain key fields
+        blocks = []
         
-        return tender_entries
+        # Split on organization headers first
+        org_pattern = r'\n[A-ZÇÁÉÍÓÚÂÊÎÔÛÃÕ][^\n]+?\([0-9]+/[0-9]+\)'
+        potential_blocks = re.split(org_pattern, text)
+        
+        # If we found blocks with org headers
+        if len(potential_blocks) > 1:
+            # First element is before first match, skip if empty
+            if potential_blocks[0].strip():
+                blocks.extend([potential_blocks[0]])
+            
+            # Reconstruct blocks with their headers
+            headers = re.findall(org_pattern, text)
+            for header, content in zip(headers, potential_blocks[1:]):
+                blocks.append(f"{header.strip()}\n{content.strip()}")
+        else:
+            # Fallback: try splitting on field markers
+            field_pattern = r'\n(?=Tipo de Órgão:|Modalidade:)'
+            blocks = [b.strip() for b in re.split(field_pattern, text) if b.strip()]
+        
+        logging.info(f"Found {len(blocks)} potential blocks")
+        
+        # Validate blocks
+        valid_blocks = []
+        required_fields = ['Tipo de Órgão:', 'Modalidade:', 'Objeto:']
+        
+        for block in blocks:
+            # Must have at least 2 required fields and be long enough
+            if sum(1 for field in required_fields if field in block) >= 2 and len(block.split()) > 20:
+                valid_blocks.append(block)
+        
+        logging.info(f"Extracted {len(valid_blocks)} valid blocks")
+        return valid_blocks
     
     def _parse_tender_block(self, block: str) -> TenderNotice:
-        """Parses a single tender block into structured data.
+        """Parses a single tender block into structured data."""
+        # Helper function to safely extract field with multiple patterns
+        def extract_field(patterns: List[str], default: str = "") -> str:
+            for pattern in patterns:
+                match = re.search(pattern, block, re.DOTALL | re.IGNORECASE)
+                if match:
+                    value = match.group(1).strip()
+                    if value:  # Only return if non-empty
+                        return value
+            return default
         
-        Args:
-            block: String containing a single tender notice.
-            
-        Returns:
-            TenderNotice object containing structured tender data.
-        """
         try:
-            # Extract fields using improved regex patterns
-            entity = re.search(r'^(.+?) \(\d+/\d+\)', block)
-            org_type = re.search(r'Tipo de Órgão:(.+?) Cidade:', block)
-            city = re.search(r'Cidade:\s+(.+?)\s+([A-Z]{2})', block)
-            modality = re.search(r'Modalidade:\s+(.+?) Nº:', block)
-            number = re.search(r'Nº:\s+([\d/]+)', block)
-            obj = re.search(r'Objeto:(.+?)(?=Segmentação:|Abertura:)', block, re.DOTALL)
-            segmentation = re.search(r'Segmentação:(.+?)(?=Abertura:|ID Universo:)', block, re.DOTALL)
-            opening_date = re.search(r'Abertura:\s+([\d/]+\s+\d+:\d+)', block)
-            tender_id = re.search(r'ID Universo:\s+(\d+)', block)
-            phone = re.search(r'Telefone:\s+([\d\(\) -]+)', block)
-            phone2 = re.search(r'Telefone 2:\s+([\d\(\) -]+)', block)
-            access = re.search(r'Acesso:\s+(.+?)(?=Complementos:|$)', block, re.DOTALL)
-            notes = re.search(r'Complementos:\s+(.+)', block, re.DOTALL)
-
-            # Build phones list
-            phones = []
-            if phone and phone.group(1).strip():
-                phones.append(phone.group(1).strip())
-            if phone2 and phone2.group(1).strip():
-                phones.append(phone2.group(1).strip())
-
-            # Build access info list from multiline string
-            access_info = []
-            if access:
-                access_lines = access.group(1).strip().split('\n')
-                access_info = [line.strip('- ').strip() for line in access_lines if line.strip('- ').strip()]
-
-            # Parse opening date
-            parsed_date = None
-            if opening_date:
+            # Extract organization (try multiple patterns)
+            org_patterns = [
+                r'^\s*([A-ZÇÁÉÍÓÚÂÊÎÔÛÃÕ][^(]+?)(?:\s*\([0-9]+/[0-9]+\)|\s*$)',
+                r'^\s*([A-ZÇÁÉÍÓÚÂÊÎÔÛÃÕ][^(]+?)(?:\s*-\s*[A-Za-zçáéíóúâêîôûãõ\s]+)',
+                r'(?:Órgão:|Entidade:)\s*([^\n]+)'
+            ]
+            organization = ""
+            for pattern in org_patterns:
+                match = re.search(pattern, block, re.DOTALL)
+                if match:
+                    organization = match.group(1).strip()
+                    if organization and not organization.startswith("Tipo de"):
+                        break
+            
+            # Extract type
+            type_patterns = [
+                r'Tipo de Órgão:\s*([^\n]+?)(?=\s+Cidade:)',
+                r'Tipo de Órgão:\s*([^\n]+)',  # Fallback without Cidade
+                r'Tipo:\s*([^\n]+)'
+            ]
+            org_type = extract_field(type_patterns)
+            
+            # Extract city and state
+            city_state_patterns = [
+                r'Cidade:\s*([^,\n]+?)\s*,?\s*([A-Z]{2})',
+                r'Local:\s*([^,\n]+?)\s*,?\s*([A-Z]{2})'
+            ]
+            city = state = ""
+            for pattern in city_state_patterns:
+                match = re.search(pattern, block)
+                if match:
+                    city, state = match.groups()
+                    city = city.strip()
+                    state = state.strip()
+                    break
+            
+            # Extract modality and number
+            modality = extract_field([
+                r'Modalidade:\s*([^\n]+?)(?=\s+Nº:)',
+                r'Modalidade:\s*([^\n]+)'
+            ])
+            
+            number = extract_field([
+                r'Nº:\s*([\d\-/]+)',
+                r'Número:\s*([\d\-/]+)'
+            ])
+            
+            # Extract object description (more robust pattern)
+            obj_patterns = [
+                r'Objeto:(.+?)(?=(?:Segmentação:|Abertura:|Telefone:|ID Universo:))',
+                r'Objeto:(.+?)(?=\n\n)',
+                r'Objeto:(.+)'  # Fallback pattern
+            ]
+            object_description = extract_field(obj_patterns)
+            
+            # Extract segmentation
+            seg_patterns = [
+                r'Segmentação:(.+?)(?=(?:Abertura:|ID Universo:|Telefone:))',
+                r'Segmentação:(.+?)(?=\n\n)',
+                r'Segmentação:(.+)'
+            ]
+            segmentation = extract_field(seg_patterns)
+            
+            # Extract opening date
+            opening_date = None
+            date_patterns = [
+                r'Abertura:\s*([\d/]+\s+[\d:]+)',
+                r'Data de Abertura:\s*([\d/]+\s+[\d:]+)'
+            ]
+            date_str = extract_field(date_patterns)
+            if date_str:
                 try:
-                    parsed_date = datetime.strptime(opening_date.group(1).strip(), '%d/%m/%Y %H:%M')
+                    opening_date = datetime.strptime(date_str.strip(), '%d/%m/%Y %H:%M')
                 except ValueError:
-                    logging.warning(f"Failed to parse opening date: {opening_date.group(1)}")
-
-            # Create and return TenderNotice object
-            return TenderNotice(
-                organization=entity.group(1).strip() if entity else "",
-                type=org_type.group(1).strip() if org_type else "",
-                city=city.group(1).strip() if city else "",
-                state=city.group(2).strip() if city else "",
-                modality=modality.group(1).strip() if modality else "",
-                number=number.group(1).strip() if number else "",
-                object_description=obj.group(1).strip() if obj else "",
-                segmentation=segmentation.group(1).strip() if segmentation else "",
-                opening_date=parsed_date,
-                id_universo=tender_id.group(1).strip() if tender_id else "",
+                    logging.warning(f"Failed to parse opening date: {date_str}")
+            
+            # Extract ID
+            id_universo = extract_field([
+                r'ID Universo:\s*(\d+)',
+                r'ID:\s*(\d+)'
+            ])
+            
+            # Extract phones
+            phones = []
+            phone_matches = re.finditer(r'(?:Telefone|Fone|Tel)(?:\s+\d+)?:\s*([\d\(\)\s\-]+)', block)
+            for match in phone_matches:
+                phone = match.group(1).strip()
+                if phone and phone not in phones:
+                    phones.append(phone)
+            
+            # Extract access info
+            access_info = []
+            access_block = re.search(r'Acesso:(.+?)(?=(?:Complementos:|$))', block, re.DOTALL)
+            if access_block:
+                # Split by common URL/email patterns and clean
+                items = re.split(r'[\n,]', access_block.group(1))
+                for item in items:
+                    item = item.strip('- ').strip()
+                    if item and item not in access_info:
+                        access_info.append(item)
+            
+            # Extract complementary info
+            complementary_info = extract_field([
+                r'Complementos:(.+?)(?=(?:Data Cadastro:|$))',
+                r'Complementos:(.+)'
+            ])
+            
+            # Create TenderNotice object
+            tender = TenderNotice(
+                organization=organization,
+                type=org_type,
+                city=city,
+                state=state,
+                modality=modality,
+                number=number,
+                object_description=object_description,
+                segmentation=segmentation,
+                opening_date=opening_date,
+                id_universo=id_universo,
                 phones=phones,
                 access_info=access_info,
-                complementary_info=notes.group(1).strip() if notes else ""
+                complementary_info=complementary_info
             )
+            
+            return tender
+            
         except Exception as e:
             logging.error(f"Error parsing tender block: {str(e)}")
             raise
     
-    def _label_tender(self, tender: TenderNotice, template: str, company_description: str) -> str:
-        """Labels a tender using the LLM.
-        
-        Args:
-            tender: TenderNotice object to label.
-            template: Prompt template for labeling.
-            company_description: Description of the company's business.
+    async def _label_tender_batch(self, tenders: List[TenderNotice], template: str, company_description: str) -> None:
+        """Labels a batch of tenders using the LLM in parallel."""
+        tasks = []
+        for tender in tenders:
+            # Create tender notice text for LLM
+            notice_text = f"""
+            Organization: {tender.organization}
+            Type: {tender.type}
+            Location: {tender.city}, {tender.state}
+            Modality: {tender.modality} {tender.number}
             
-        Returns:
-            Label string ('yes', 'no', or 'unsure').
-        """
-        # Create tender notice text for LLM
-        notice_text = f"""
-        Organization: {tender.organization}
-        Type: {tender.type}
-        Location: {tender.city}, {tender.state}
-        Modality: {tender.modality} {tender.number}
+            Object Description:
+            {tender.object_description}
+            
+            Segmentation:
+            {tender.segmentation}
+            """
+            
+            # Create prompt and get response directly from LLM
+            prompt = ChatPromptTemplate.from_template(template)
+            messages = prompt.format_messages(
+                company_business_description=company_description,
+                tender_notice=notice_text
+            )
+            tasks.append(self.llm.ainvoke(messages))
         
-        Object Description:
-        {tender.object_description}
+        # Process all tasks in parallel
+        responses = await asyncio.gather(*tasks)
         
-        Segmentation:
-        {tender.segmentation}
-        """
-        
-        # Create prompt and get response directly from LLM
-        prompt = ChatPromptTemplate.from_template(template)
-        messages = prompt.format_messages(
-            company_business_description=company_description,
-            tender_notice=notice_text
-        )
-        response = self.llm.invoke(messages).content
-        
-        # Extract label from response
-        label_match = re.search(r'(yes|no|unsure)', response.lower())
-        return label_match.group(1) if label_match else 'unsure'
+        # Extract labels from responses
+        for tender, response in zip(tenders, responses):
+            label_match = re.search(r'(yes|no|unsure)', response.content.lower())
+            tender.label = label_match.group(1) if label_match else 'unsure'
     
-    def process_pdf(self, pdf_path: str, template: str, company_description: str) -> pd.DataFrame:
-        """Processes a PDF containing tender notices.
+    async def process_pdf(
+        self, 
+        pdf_path: str, 
+        template: str, 
+        company_description: str,
+        progress_callback: Optional[Callable[[str], None]] = None,
+        max_concurrent_chunks: int = 5
+    ) -> pd.DataFrame:
+        """Processes a PDF containing tender notices with async batch processing."""
+        logging.info(f"Processing PDF: {pdf_path}")
         
-        Args:
-            pdf_path: Path to the PDF file.
-            template: Prompt template for labeling.
-            company_description: Description of the company's business.
-            
-        Returns:
-            DataFrame containing processed and labeled tenders.
-        """
         try:
-            # Load PDF
-            loader = PyPDFLoader(pdf_path)
-            pages = loader.load()
+            # Extract text from PDF
+            text = extract_text(pdf_path)
             
-            # Combine page contents
-            text = "\n".join(page.page_content for page in pages)
+            # Show extracted text in UI
+            with st.expander("Extracted Text Content", expanded=False):
+                st.text(text)
             
             # Extract tender blocks
             blocks = self._extract_tender_blocks(text)
             
             # Parse blocks into TenderNotice objects
             tenders = []
-            for block in blocks:
+            for i, block in enumerate(blocks, 1):
+                logging.info(f"Processing block {i}/{len(blocks)}")
+                logging.info(f"Block content: {block[:200]}...")  # Log first 200 chars
+                
                 try:
                     tender = self._parse_tender_block(block)
-                    # Label tender
-                    tender.label = self._label_tender(tender, template, company_description)
-                    tenders.append(tender)
+                    if tender:
+                        tenders.append(tender)
+                        if progress_callback:
+                            progress_callback(f"Processed tender {i}/{len(blocks)}: {tender.organization}")
                 except Exception as e:
-                    logging.error(f"Error processing tender block: {str(e)}")
-                    continue
+                    logging.error(f"Error processing block {i}: {str(e)}")
+                    logging.error(f"Block content: {block}")
+            
+            # Process tenders in batches with semaphore to limit concurrency
+            semaphore = asyncio.Semaphore(max_concurrent_chunks)
+            total_batches = (len(tenders) + self.batch_size - 1) // self.batch_size
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            async def process_batch(batch_index: int, batch: List[TenderNotice]):
+                async with semaphore:
+                    status_text.text(f"Processing batch {batch_index + 1} of {total_batches}...")
+                    await self._label_tender_batch(batch, template, company_description)
+                    progress = (batch_index + 1) / total_batches
+                    progress_bar.progress(progress)
+                    if progress_callback:
+                        progress_callback(f"Processed batch {batch_index + 1} of {total_batches}")
+            
+            # Create tasks for all batches
+            tasks = []
+            for i in range(0, len(tenders), self.batch_size):
+                batch = tenders[i:i + self.batch_size]
+                tasks.append(process_batch(i // self.batch_size, batch))
+            
+            # Process all batches
+            await asyncio.gather(*tasks)
+            
+            progress_bar.progress(1.0)
+            status_text.text("Processing completed!")
             
             # Convert to DataFrame
             df = pd.DataFrame([vars(t) for t in tenders])
@@ -213,4 +349,66 @@ class TenderNoticeProcessor:
         except Exception as e:
             logging.error(f"Error processing PDF: {str(e)}")
             raise
+
+if __name__ == "__main__":
+    import sys
+    import asyncio
+    import os
+    from langchain_openai import AzureChatOpenAI
+    
+    # Configure logging
+    logging.basicConfig(level=logging.INFO,
+                       format='%(asctime)s - %(levelname)s - %(message)s')
+    
+    if len(sys.argv) != 2:
+        print("Usage: python tender_notice_processor.py <pdf_path>")
+        sys.exit(1)
+    
+    pdf_path = sys.argv[1]
+    
+    # Create LLM instance
+    llm = AzureChatOpenAI(
+        openai_api_version="2023-05-15",
+        azure_deployment="gpt-4o",
+        temperature=0
+    )
+    
+    # Test data
+    template = """
+    Você é um especialista em análise de licitações. Sua tarefa é analisar o edital de licitação fornecido e determinar se a empresa deve participar com base nos seguintes critérios:
+    
+    1. A empresa atua no setor de engenharia e construção civil, com foco em:
+       - Obras de infraestrutura
+       - Construção de edifícios
+       - Reformas e adaptações
+       - Instalações elétricas e hidráulicas
+    
+    2. A empresa tem capacidade para executar obras de até R$ 10 milhões
+    
+    3. A empresa atua principalmente nos estados: SP, RJ, MG, PR, SC
+    
+    Analise o edital e responda apenas "yes" se a empresa deve participar, "no" se não deve participar, ou "maybe" se precisar de mais informações.
+    """
+    
+    company_description = """
+    Empresa de engenharia e construção civil com 15 anos de experiência.
+    Principais áreas de atuação:
+    - Obras de infraestrutura
+    - Construção de edifícios
+    - Reformas e adaptações
+    - Instalações elétricas e hidráulicas
+    
+    Capacidade de execução: Até R$ 10 milhões por obra
+    Região de atuação: SP, RJ, MG, PR, SC
+    """
+    
+    processor = TenderNoticeProcessor(llm=llm)
+    
+    async def main():
+        tenders = await processor.process_pdf(pdf_path, template, company_description)
+        print(f"\nProcessed {len(tenders)} tenders:")
+        for tender in tenders:
+            print(f"\n{tender}")
+    
+    asyncio.run(main())
 
