@@ -71,7 +71,7 @@ if "labeled_sections" not in st.session_state:
 if "filtered_sections" not in st.session_state:
     st.session_state.filtered_sections = None
 if "summary" not in st.session_state:
-    st.session_state.summary = None
+    st.session_state.summary = ""
 if "show_preview" not in st.session_state:
     st.session_state.show_preview = True
 if "processing_status" not in st.session_state:
