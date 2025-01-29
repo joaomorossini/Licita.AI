@@ -126,14 +126,14 @@ class TenderAnalysisCrew:
             function_calling_llm=llm,
             output_log_file=(
                 f"src/tender_analysis_crew/outputs/tender_analysis_crew_logs_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log"
-                if self.env == "prod"
+                if self.env == "dev"
                 else None
             ),
             task_execution_output_json_files=(
                 [
                     f"src/tender_analysis_crew/outputs/task_execution_output_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
                 ]
-                if self.env == "prod"
+                if self.env == "dev"
                 else None
             ),
         )
