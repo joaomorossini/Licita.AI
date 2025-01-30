@@ -87,119 +87,7 @@ if "processing_status" not in st.session_state:
 if "error_details" not in st.session_state:
     st.session_state.error_details = None
 
-
-# Filters in sidebar
-with st.sidebar:
-    st.markdown(
-        """
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-        <h1 style="display: flex; align-items: center;">
-            Filtros&nbsp<span class="material-icons">filter_alt</span>
-        </h1>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # File upload section
-    st.markdown("### 📤 Upload de Arquivos")
-    uploaded_files = st.file_uploader(
-        "Selecione os boletins para processar (PDF)",
-        type=['pdf'],
-        accept_multiple_files=True
-    )
-
-    if uploaded_files:
-        st.success(f"{len(uploaded_files)} arquivo(s) recebido(s)")
-
-    # Process button
-    st.markdown("---")
-    process_button = st.button(
-        "⚡ Processar",
-        type="primary",
-        use_container_width=True,
-        disabled=not uploaded_files,
-    )
-
-# TODO: Refactor. Move to src/tender_notice_labeling/tender_notice_processor.py
-async def process_pdfs(files):
-    """Process multiple PDFs asynchronously."""
-    try:
-        # Initialize processor with correct model settings
-        processor = TenderNoticeProcessor()
-        
-        # Process each PDF
-        all_tenders = []
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        for i, file in enumerate(files):
-            try:
-                # Save uploaded file temporarily
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                    tmp_file.write(file.getvalue())
-                    tmp_path = tmp_file.name
-                
-                try:
-                    # Update status
-                    status_text.text(f"Processando {file.name}...")
-                    
-                    # Process PDF
-                    df = await processor.process_pdf(
-                        pdf_path=tmp_path,
-                        template=TENDER_NOTICE_LABELING_TEMPLATE,
-                        company_description=COMPANY_BUSINESS_DESCRIPTION,
-                        max_concurrent_chunks=5
-                    )
-                    
-                    if not df.empty:
-                        # Add source information
-                        df['source_file'] = file.name
-                        df['processed_at'] = datetime.now()
-                        all_tenders.append(df)
-                    
-                finally:
-                    # Clean up temp file
-                    os.unlink(tmp_path)
-                
-            except Exception as e:
-                st.error(f"Erro ao processar {file.name}: {str(e)}")
-                if os.getenv("ENVIRONMENT") == "dev":
-                    st.exception(e)
-                continue
-            
-            # Update progress
-            progress = (i + 1) / len(files)
-            progress_bar.progress(progress)
-        
-        # Clear progress indicators
-        progress_bar.empty()
-        status_text.empty()
-        
-        # Combine all results
-        if all_tenders:
-            df = pd.concat(all_tenders, ignore_index=True)
-            return df
-            
-        return pd.DataFrame()
-        
-    except Exception as e:
-        st.error(f"Erro ao processar os boletins: {str(e)}")
-        if os.getenv("ENVIRONMENT") == "dev":
-            st.exception(e)
-        return pd.DataFrame()
-
-# Main content area
-if process_button and uploaded_files:
-    with st.spinner("Processando boletins..."):
-        # Run async processing
-        st.session_state.processed_tenders = asyncio.run(process_pdfs(uploaded_files))
-        
-        if not st.session_state.processed_tenders.empty:
-            st.toast("Processamento concluído com sucesso!", icon="✅")
-        else:
-            st.error("Nenhum boletim foi processado com sucesso.")
-                
-# Display results
+# Display results (metrics, dataframe, and buttons)
 if st.session_state.processed_tenders is not None and not st.session_state.processed_tenders.empty:
     # Display statistics
     total = len(st.session_state.processed_tenders)
@@ -328,3 +216,141 @@ if st.session_state.processed_tenders is not None and not st.session_state.proce
             key='download-excel'
         ):
             st.toast("Download iniciado!")
+else:
+    st.info("Nenhum dado processado ainda. Faça o upload de arquivos para começar.")
+    st.markdown(
+        """
+        <style>
+            .metric-label, .metric-value {
+                font-size: 20px;
+                text-align: center;
+                color: #888;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown('<div class="metric-label">TOTAL DE BOLETINS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-value">0</div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown('<div class="metric-label">PARTICIPAR</div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-value">0</div>', unsafe_allow_html=True)
+    with col3:
+        st.markdown('<div class="metric-label">AVALIAR</div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-value">0</div>', unsafe_allow_html=True)
+    with col4:
+        st.markdown('<div class="metric-label">DECLINAR</div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-value">0</div>', unsafe_allow_html=True)
+
+# Filters in sidebar
+with st.sidebar:
+    st.markdown(
+        """
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style="display: flex; align-items: center;">
+            Filtros&nbsp<span class="material-icons">filter_alt</span>
+        </h1>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # File upload section
+    st.markdown("### 📤 Upload de Arquivos")
+    uploaded_files = st.file_uploader(
+        "Selecione os boletins para processar (PDF)",
+        type=['pdf'],
+        accept_multiple_files=True
+    )
+
+    if uploaded_files:
+        st.success(f"{len(uploaded_files)} arquivo(s) recebido(s)")
+
+    # Process button
+    st.markdown("---")
+    process_button = st.button(
+        "⚡ Processar",
+        type="primary",
+        use_container_width=True,
+        disabled=not uploaded_files,
+    )
+
+# TODO: Refactor. Move to src/tender_notice_labeling/tender_notice_processor.py
+async def process_pdfs(files):
+    """Process multiple PDFs asynchronously."""
+    try:
+        # Initialize processor with correct model settings
+        processor = TenderNoticeProcessor()
+        
+        # Process each PDF
+        all_tenders = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i, file in enumerate(files):
+            try:
+                # Save uploaded file temporarily
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    tmp_file.write(file.getvalue())
+                    tmp_path = tmp_file.name
+                
+                try:
+                    # Update status
+                    status_text.text(f"Processando {file.name}...")
+                    
+                    # Process PDF
+                    df = await processor.process_pdf(
+                        pdf_path=tmp_path,
+                        template=TENDER_NOTICE_LABELING_TEMPLATE,
+                        company_description=COMPANY_BUSINESS_DESCRIPTION,
+                        max_concurrent_chunks=5
+                    )
+                    
+                    if not df.empty:
+                        # Add source information
+                        df['source_file'] = file.name
+                        df['processed_at'] = datetime.now()
+                        all_tenders.append(df)
+                    
+                finally:
+                    # Clean up temp file
+                    os.unlink(tmp_path)
+                
+            except Exception as e:
+                st.error(f"Erro ao processar {file.name}: {str(e)}")
+                if os.getenv("ENVIRONMENT") == "dev":
+                    st.exception(e)
+                continue
+            
+            # Update progress
+            progress = (i + 1) / len(files)
+            progress_bar.progress(progress)
+        
+        # Clear progress indicators
+        progress_bar.empty()
+        status_text.empty()
+        
+        # Combine all results
+        if all_tenders:
+            df = pd.concat(all_tenders, ignore_index=True)
+            return df
+            
+        return pd.DataFrame()
+        
+    except Exception as e:
+        st.error(f"Erro ao processar os boletins: {str(e)}")
+        if os.getenv("ENVIRONMENT") == "dev":
+            st.exception(e)
+        return pd.DataFrame()
+
+# Main content area
+if process_button and uploaded_files:
+    with st.spinner("Processando boletins..."):
+        # Run async processing
+        st.session_state.processed_tenders = asyncio.run(process_pdfs(uploaded_files))
+        
+        if not st.session_state.processed_tenders.empty:
+            st.toast("Processamento concluído com sucesso!", icon="✅")
+        else:
+            st.error("Nenhum boletim foi processado com sucesso!")
