@@ -11,9 +11,9 @@ import asyncio
 from tempfile import NamedTemporaryFile
 
 from src.tender_notice_labeling.tender_notice_processor import TenderNoticeProcessor
-from src.tender_notice_labeling.tender_notice_labeling_template import (
-    tender_notice_labeling_template,
-    company_business_description,
+from src.tender_notice_labeling.tender_notice_templates import (
+    TENDER_NOTICE_LABELING_TEMPLATE,
+    COMPANY_BUSINESS_DESCRIPTION,
 )
 
 # Configure page
@@ -76,7 +76,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("📰 Processamento de Boletins")
+st.title("📰 Boletins de Licitações")
 st.divider()
 
 # Initialize session state
@@ -87,30 +87,6 @@ if "processing_status" not in st.session_state:
 if "error_details" not in st.session_state:
     st.session_state.error_details = None
 
-# Date filters at the top
-# st.markdown('<div class="date-filters">', unsafe_allow_html=True)
-# date_cols = st.columns([1, 2, 0.5, 1, 2, 6])
-
-# with date_cols[0]:
-#     st.markdown('<p class="date-label">De</p>', unsafe_allow_html=True)
-# with date_cols[1]:
-#     start_date = st.date_input(
-#         "De",
-#         value=datetime.now().date() - timedelta(days=30),
-#         max_value=datetime.now().date(),
-#         label_visibility="collapsed",
-#     )
-
-# with date_cols[3]:
-#     st.markdown('<p class="date-label">Até</p>', unsafe_allow_html=True)
-# with date_cols[4]:
-#     end_date = st.date_input(
-#         "Até",
-#         value=datetime.now().date(),
-#         max_value=datetime.now().date(),
-#         label_visibility="collapsed",
-#     )
-# st.markdown("</div>", unsafe_allow_html=True)
 
 # Filters in sidebar
 with st.sidebar:
@@ -135,32 +111,6 @@ with st.sidebar:
     if uploaded_files:
         st.success(f"{len(uploaded_files)} arquivo(s) recebido(s)")
 
-    # # Client filter
-    # st.subheader("Cliente")
-    # selected_clients = st.multiselect(
-    #     "Selecione os clientes",
-    #     ["Empresa A", "Empresa B", "Empresa C", "Empresa D", "Empresa E"],
-    #     default=[],
-    # )
-
-    # # Value range
-    # st.subheader("Valor de Referência")
-    # min_value = st.number_input(
-    #     "Valor mínimo", min_value=0, value=0, step=10000, format="%d"
-    # )
-    # max_value = st.number_input(
-    #     "Valor máximo", min_value=0, value=1000000, step=10000, format="%d"
-    # )
-
-    # # Label filter
-    # st.subheader("Classificação")
-    # selected_labels = st.multiselect(
-    #     "Selecione as classificações",
-    #     ["Participar", "Talvez", "Não Participar"],
-    #     default=[],
-    #     help="Filtre as licitações por classificação"
-    # )
-
     # Process button
     st.markdown("---")
     process_button = st.button(
@@ -170,18 +120,12 @@ with st.sidebar:
         disabled=not uploaded_files,
     )
 
+# TODO: Refactor. Move to src/tender_notice_labeling/tender_notice_processor.py
 async def process_pdfs(files):
     """Process multiple PDFs asynchronously."""
     try:
-        # Initialize Azure OpenAI
-        llm = AzureChatOpenAI(
-            model="gpt-4o-mini",
-            azure_deployment="gpt-4o-mini",
-            temperature=0
-        )
-        
-        # Initialize processor
-        processor = TenderNoticeProcessor(llm=llm, batch_size=5)
+        # Initialize processor with correct model settings
+        processor = TenderNoticeProcessor()
         
         # Process each PDF
         all_tenders = []
@@ -202,8 +146,8 @@ async def process_pdfs(files):
                     # Process PDF
                     df = await processor.process_pdf(
                         pdf_path=tmp_path,
-                        template=tender_notice_labeling_template,
-                        company_description=company_business_description,
+                        template=TENDER_NOTICE_LABELING_TEMPLATE,
+                        company_description=COMPANY_BUSINESS_DESCRIPTION,
                         max_concurrent_chunks=5
                     )
                     
@@ -234,15 +178,6 @@ async def process_pdfs(files):
         # Combine all results
         if all_tenders:
             df = pd.concat(all_tenders, ignore_index=True)
-            
-            # Map labels to display values with emojis
-            label_map = {
-                'yes': '✅ Participar',
-                'no': '❌ Não participar',
-                'unsure': '🤔 Talvez'
-            }
-            df['label'] = df['label'].map(label_map)
-            
             return df
             
         return pd.DataFrame()
@@ -268,72 +203,128 @@ if process_button and uploaded_files:
 if st.session_state.processed_tenders is not None and not st.session_state.processed_tenders.empty:
     # Display statistics
     total = len(st.session_state.processed_tenders)
-    relevant = len(st.session_state.processed_tenders[st.session_state.processed_tenders['label'].str.contains('Participar')])
-    maybe = len(st.session_state.processed_tenders[st.session_state.processed_tenders['label'].str.contains('Talvez')])
     
-    col1, col2, col3 = st.columns(3)
+    # Safe label counting
+    def count_labels(df: pd.DataFrame, pattern: str) -> int:
+        return df['label'].str.contains(pattern, na=False).sum()
+    
+    relevant = count_labels(st.session_state.processed_tenders, 'Participar')
+    need_analysis = count_labels(st.session_state.processed_tenders, 'Avaliar')
+    irrelevant = total - relevant - need_analysis
+    
+    st.markdown(
+        """
+        <style>
+            .metric-label {
+                font-size: 20px;
+                text-align: center;
+            }
+            .metric-value {
+                font-size: 50px;
+                text-align: center;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
-        st.metric("Total de Licitações", total)
+        st.markdown('<div class="metric-label">TOTAL DE BOLETINS</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-value">{total}</div>', unsafe_allow_html=True)
     with col2:
-        st.metric("Licitações Relevantes", relevant)
+        st.markdown('<div class="metric-label">PARTICIPAR</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-value">{relevant}</div>', unsafe_allow_html=True)
     with col3:
-        st.metric("Necessitam Análise", maybe)
+        st.markdown('<div class="metric-label">AVALIAR</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-value">{need_analysis}</div>', unsafe_allow_html=True)
+    with col4:
+        st.markdown('<div class="metric-label">DECLINAR</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-value">{irrelevant}</div>', unsafe_allow_html=True)
     
     # Show DataFrame with specific columns and formatting
     display_df = st.session_state.processed_tenders.copy()
+    
+    # Ensure all columns have proper values
+    display_df['orgao'] = display_df['orgao'].fillna('Organização não identificada')
+    display_df['estado'] = display_df['estado'].fillna('N/A')
+    display_df['numero_licitacao'] = display_df['numero_licitacao'].fillna('N/A')
+    display_df['objeto'] = display_df['objeto'].fillna('Descrição não disponível')
+    
     st.dataframe(
-        display_df,
+        data=display_df,
+        height=400,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "organization": st.column_config.TextColumn(
+            "orgao": st.column_config.TextColumn(
                 "Cliente",
                 help="Nome da organização",
                 width="medium",
             ),
-            "state": st.column_config.TextColumn(
-                "Estado",
-                help="Estado",
+            "estado": st.column_config.TextColumn(
+                "UF",
+                help="UF",
                 width="small",
             ),
-            "number": st.column_config.TextColumn(
-                "Número",
+            "numero_licitacao": st.column_config.TextColumn(
+                "Nº",
                 help="Número do processo",
                 width="small",
             ),
-            "object_description": st.column_config.TextColumn(
-                "Objeto",
+            "objeto": st.column_config.TextColumn(
+                "Descrição do objeto",
                 help="Descrição do objeto",
                 width="large",
             ),
-            "opening_date": st.column_config.DatetimeColumn(
+            "data_hora_licitacao": st.column_config.DatetimeColumn(
                 "Data",
                 help="Data de abertura",
                 format="DD/MM/YYYY HH:mm",
                 width="medium",
             ),
             "label": st.column_config.TextColumn(
-                "Ação",
+                "Recomendação",
                 help="Ação recomendada para a licitação",
                 width="small",
             ),
         },
         column_order=[
-            "organization",
-            "state",
-            "number",
-            "object_description",
-            "opening_date",
+            "orgao",
+            "estado",
+            "numero_licitacao",
+            "objeto",
+            "data_hora_licitacao",
             "label",
         ],
     )
     
-    # Download button with semicolon separator
-    if st.download_button(
-        "📥 Baixar Resultados (CSV)",
-        display_df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig'),
-        "resultados_licitacoes.csv",
-        "text/csv",
-        key='download-csv'
-    ):
-        st.success("Download iniciado!")
+    # Download buttons
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        # CSV download button
+        if st.download_button(
+            "📥 Baixar Resultados (CSV)",
+            display_df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig'),
+            "resultados_licitacoes.csv",
+            "text/csv",
+            key='download-csv'
+        ):
+            st.toast("Download iniciado!")
+    
+    with col2:
+        # Excel download button
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+            display_df.to_excel(writer, index=False, sheet_name='Licitações')
+        
+        if st.download_button(
+            "📥 Baixar Resultados (Excel)",
+            excel_buffer.getvalue(),
+            "resultados_licitacoes.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key='download-excel'
+        ):
+            st.toast("Download iniciado!")
