@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import tempfile
 import os
-from langchain_community.chat_models import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI
 import io
 import asyncio
 from tempfile import NamedTemporaryFile
