@@ -140,7 +140,7 @@ try:
                     expanded=False,
                 ):
                     # Clean up description text
-                    description = f"Útil para buscar informações relevantes referentes à licitação: {tender_name}"
+                    description = f"Útil para buscar informações relevantes referentes à licitação: {tender_name.replace("|", "").strip()}"
                     st.caption(description)
                     st.divider()
 
