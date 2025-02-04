@@ -9,9 +9,13 @@ rootpath.append()
 
 from src.tender_analysis_crew.crew import TenderAnalysisCrew, TenderAnalysisUtils
 
-# TODO: Otimizar formato e instruções do resumo com base nos resumos da Fast
-# TODO: Adicionar opção para salvar resumo em PDF
-# TODO: Utilizar API da Adobe pra ler pdfs complexos, contendo imagens e tabelas: https://opensource.adobe.com/developers.adobe.com/apis/documentcloud/dcsdk/pdf-extract.html
+# PRINCIPAL
+## TODO: Adicionar botão para download do resumo em PDF
+## TODO: Adicionar botão para adicionar resumo a uma base de conhecimento existente ou criar uma nova
+
+# SECUNDÁRIO
+## TODO: Otimizar formato e instruções do resumo com base nos resumos da Fast
+## TODO: Utilizar API da Adobe pra ler pdfs complexos, contendo imagens e tabelas: https://opensource.adobe.com/developers.adobe.com/apis/documentcloud/dcsdk/pdf-extract.html
 
 crew = TenderAnalysisCrew()
 utils = TenderAnalysisUtils()
@@ -136,7 +140,7 @@ with st.expander("🔍 Pré-Visualização dos Documentos", expanded=st.session_
                 total_tokens = utils._length_function(st.session_state.tender_documents_text)
                 chunks = utils.split_text(st.session_state.tender_documents_text)
                 st.caption(
-                    f"📊 Estatísticas do Documento: {total_chars:,} caracteres • {total_tokens} tokens • {len(chunks)} chunks"
+                    f"📊 Estatísticas do Documento: {total_chars:,} caracteres • {total_tokens} tokens • {len(chunks)} partes"
                 )
                 st.markdown(st.session_state.tender_documents_text)
             except Exception as e:
@@ -167,7 +171,7 @@ if st.button(
             total_chunks = len(chunks)
 
             # Update initial status
-            st.session_state.processing_status = f"Processando chunk 0/{total_chunks}"
+            st.session_state.processing_status = f"Processando parte 0/{total_chunks}"
             status_text.text(st.session_state.processing_status)
 
             def update_progress(current_chunk: int):
@@ -176,7 +180,7 @@ if st.button(
                     progress = float(current_chunk) / total_chunks
                     progress_bar.progress(progress)
                     st.session_state.processing_status = (
-                        f"Processando chunk {current_chunk}/{total_chunks}"
+                        f"Processando parte {current_chunk}/{total_chunks}"
                     )
                     status_text.text(st.session_state.processing_status)
                 except Exception as e:
@@ -207,7 +211,6 @@ if st.button(
             status_text.empty()
 
 if st.session_state.summary:
-    st.markdown("### 📄 Resumo")
     st.markdown(st.session_state.summary)
 
 # Display detailed error information if available
