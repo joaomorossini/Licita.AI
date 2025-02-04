@@ -379,7 +379,7 @@ class DifyClient:
                     continue
 
     def fetch_all_datasets(self, page: int = 1, limit: int = 20) -> list:
-        """Fetch all datasets whose names start with '_-_' and return only id, name, and description.
+        """Fetch all datasets whose names start with '|' and return only id, name, and description.
 
         Args:
             page: Page number for pagination.
@@ -411,7 +411,7 @@ class DifyClient:
                     "description": dataset["description"],
                 }
                 for dataset in datasets
-                if dataset["name"].startswith("_-_")
+                if dataset["name"].startswith("|")
             ]
             return filtered_datasets
 

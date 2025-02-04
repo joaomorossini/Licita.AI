@@ -76,7 +76,8 @@ if uploaded_files:
         disabled=submit_disabled,
         use_container_width=True,
     ):
-        dataset_name = f"_-_{cliente} - {referencia} - {id_licitacao}_-_"
+        # TODO: Validate that dataset name is no more than 40 characters long
+        dataset_name = f"|{cliente}-{referencia}-{id_licitacao}|"
 
         with st.spinner("Criando base de conhecimento..."):
             try:
@@ -131,8 +132,8 @@ try:
             # Adjust column widths to minimize spacing between buttons
             col1, col2, col3 = st.columns([0.9, 0.05, 0.05])
             with col1:
-                # Extract tender name from dataset name (remove _-_ prefix/suffix)
-                tender_name = dataset["name"].replace("_-_", "").strip()
+                # Extract tender name from dataset name (remove | prefix/suffix)
+                tender_name = dataset["name"].replace("|", "").strip()
 
                 with st.expander(
                     f"**Status**: {status_text} {status_icon}     •     **Id Licitação**: {tender_name}",

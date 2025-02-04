@@ -71,7 +71,7 @@ with st.sidebar:
     #     datasets = dify_client.fetch_all_datasets()
     #     if datasets:
     #         for dataset in datasets:
-    #             dataset_name = dataset["name"].replace("_-_", "")
+    #             dataset_name = dataset["name"].replace("|", "")
     #             # Get dataset status
     #             status_type, status_icon, _ = dify_client.get_dataset_status(
     #                 dataset["id"]
