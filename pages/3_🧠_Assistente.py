@@ -2,10 +2,11 @@ import os
 import tempfile
 import streamlit as st
 import streamlit.components.v1 as components
+from dotenv import load_dotenv
 
 from src.dify_client import DifyClient
 
-# from src.dify_client import DifyClient
+load_dotenv()
 
 
 # Configure page
@@ -36,26 +37,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-def copy_to_clipboard(text):
-    """Create a button that copies text to clipboard using JavaScript."""
-    html_code = f"""
-        <input type="text" value='{text}' id="myInput" style="position: absolute; left: -9999px;">
-        <script>
-            var copyText = document.getElementById("myInput");
-            copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
-            copyText.remove();
-        </script>
-    """
-    st.components.v1.html(html_code, height=0)
-
-
-# Create DifyClient instance
-# dify_client = DifyClient()
-
-# Sidebar - Available Tenders
 with st.sidebar:
     st.info(
         "💡 **DICA**: Lembre-se sempre de especificar sobre qual licitação você deseja conversar, assim o agente saberá onde buscar as informações relevantes."
@@ -64,30 +45,27 @@ with st.sidebar:
 st.title("Assistente de Licitações 💬")
 st.divider()
 
-# TODO: Replace with ENV variable with URL from my own Dify instance
-src = "https://udify.app/chat/pDAjmEFFaYQqHags"
-
-
 # TODO: Apply styling to the iframe to match the app's design
-# Style the iframe element and hide the specific div
+# Embed the iframe with styling
 iframe_style = """
 <style>
   #dify-iframe {
     border: 0px groove #ffffff;
     border-radius: 8px;
     width: 100%;
-    height: 575px;
+    height: 600px;
   }
 </style>
 """
 
-# Embed the iframe with styling
+src = os.getenv("DIFY_APP_SRC")
+
 components.html(
     f"""
   {iframe_style}
   <iframe id="dify-iframe" src={src} allow="microphone"></iframe>
 """,
-    height=500,
+    height=600,
 )
 
 st.divider()
