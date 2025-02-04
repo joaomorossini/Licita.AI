@@ -63,7 +63,7 @@ def mock_env_vars(monkeypatch):
     """Set up environment variables for testing."""
     monkeypatch.setenv("DIFY_API_KEY", "test_api_key")
     monkeypatch.setenv("DIFY_KNOWLEDGE_API_KEY", "test_knowledge_api_key")
-    monkeypatch.setenv("DIFY_API_URL", "https://test.dify.api")
+    monkeypatch.setenv("DIFY_KNOWLEDGE_API_URL", "https://test.dify.api")
 
 
 @pytest.fixture

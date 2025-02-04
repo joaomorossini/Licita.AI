@@ -34,7 +34,7 @@ class DifyClient:
             default_dataset_id: Optional default dataset ID. Defaults to predefined constant.
         """
         self.base_url = base_url or os.getenv(
-            "DIFY_API_URL", "https://dify.cogmo.com.br/v1"
+            "DIFY_KNOWLEDGE_API_URL", "https://dify.cogmo.com.br/v1"
         )
         self.default_dataset_id = (
             default_dataset_id or "87c98a6b-bb10-4eec-8992-0ec453751e58"
@@ -42,9 +42,9 @@ class DifyClient:
 
         # Validate base URL
         if not self.base_url:
-            raise EnvironmentError("DIFY_API_URL environment variable not set")
+            raise EnvironmentError("DIFY_KNOWLEDGE_API_URL environment variable not set")
         if not self.base_url.startswith(("http://", "https://")):
-            raise EnvironmentError("DIFY_API_URL must start with http:// or https://")
+            raise EnvironmentError("DIFY_KNOWLEDGE_API_URL must start with http:// or https://")
 
     def _get_api_key(self, for_knowledge: bool = False) -> str:
         """Get the appropriate API key from environment variables.
