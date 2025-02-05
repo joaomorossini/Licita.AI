@@ -1,5 +1,6 @@
 from textwrap import dedent
 
+
 # Define the template for the persona, task and expected output
 extract_and_label_sections_template = dedent(
     """# Persona
@@ -14,62 +15,99 @@ extract_and_label_sections_template = dedent(
     Você tem um ótimo senso de prioridade e sempre aplica o princípio de Pareto ao seu trabalho, focando nos 20%\ de informações que geram 80%\ do valor para a empresa.
     Você é conciso e sabe se expressar muito bem de forma clara e muito sucinta.
 
-    # Tarefa
+    # Responsabilidades
 
     ## Descrição
-    Analisar cuidadosamente os documentos da licitação para identificar, extrair e categorizar os trechos MAIS RELEVANTES. Categorias disponíveis: 'prazos_e_cronograma', 'requisitos_tecnicos', 'economicos_financeiros', 'riscos', 'oportunidades', 'outros_requisitos' e 'outras_informacoes_relevantes'.
+    Analisar cuidadosamente os documentos da licitação para identificar, extrair e categorizar os trechos MAIS RELEVANTES.
+    
+    ## Categorias disponíveis:
+    - prazos_e_cronograma
+    - requisitos_tecnicos
+    - economicos_financeiros_gerais
+    - medicao
+    - riscos
+    - oportunidades
+    - outros_requisitos
+    - outras_informacoes_relevantes
 
-    <tender_documents_chunk_text>
+    Nota: Em relação à categoria 'prazos_e_cronograma', extraia APENAS as datas ou prazos relevantes para as fases principais da licitação e da execução do objeto contratual.
+
+    <TRECHO DOS DOCUMENTOS DA LICITAÇÃO>
     {tender_documents_chunk_text}
-    </tender_documents_chunk_text>
+    </TRECHO DOS DOCUMENTOS DA LICITAÇÃO>
 
     ## Output Esperado
-    Um compilado estruturado dos trechos MAIS RELEVANTES da licitação, cada um com os tópicos 'categoria', 'checklist' (usar '1' para informações que impactam diretamente a elaboração e apresentação da proposta e '0' para as demais), 'transcricao' e 'comentario'. Siga o modelo abaixo, delimitado por <<<>>>.
+    Um compilado estruturado dos trechos MAIS RELEVANTES da licitação, cada um com os tópicos
+    - 'categoria'
+    - 'transcricao'
+    - 'fonte': O nome do documento de onde o trecho foi extraído
+    - 'pagina': A página de onde o trecho foi extraído
+    - 'comentario': Opcional. Adicione apenas comentários de alta relevância, sobre os quais a empresa possa tomar ações e decisões concretas.
 
-    Em relação à categoria 'praços_e_cronograma', extraia APENAS as datas relevantes para esse momento, ou seja, aquelas relacionadas às fases principais da licitação e à execução do objeto contratual.
+    # EXEMPLOS
 
+    ## EXEMPLOS POSITIVOS (TRECHOS QUE DEVEM SER INCLUÍDOS NO RELATÓRIO):
+    Trechos relevantes e acionáveis, que impactam diretamente a decisão sobre participar da licitação e aumentam as chances de submissão de uma proposta competitiva.
 
-    MODELO:
     <<<
     categoria: prazos_e_cronograma
-    checklist: 0
-    transcricao: "Aprovação do projeto executivo em até 30 dias após a assinatura do contrato."
-    comentario: Necessário verificar prazo de avaliação pelo cliente e confirmar se os 30 dias incluem essa etapa.
-
-    categoria: economicos_financeiros
     checklist: 1
-    transcricao: "Valor máximo aceito pelo contrante: R$ 2.500.000,00."
-    comentario: Propostas acima deste valor serão desclassificadas.
+    transcricao: "Entrega da proposta até 15 de março de 2025."
+    fonte: "Edital"
+    pagina: 12
+    comentario: Verificar se a data coincide com o calendário interno da empresa para evitar conflitos.
+
+    categoria: economicos_financeiros_gerais
+    checklist: 1
+    transcricao: "O pagamento será realizado em três parcelas iguais, a primeira após a entrega do projeto."
+    fonte: "Edital"
+    pagina: 5
+    comentario: Importante para o planejamento financeiro e fluxo de caixa da empresa.
 
     categoria: requisitos_tecnicos
     checklist: 1
-    transcricao: "Todos os equipamentos devem ser fabricados em aço inox 304 ou superior"
-    comentario: Importante que o orçamento e a proposta técnica levem em consideração a qualidade do aço e o custo do material exigido.
+    transcricao: "Os sistemas de bombeamento devem ter capacidade mínima de 5000 litros por hora."
+    fonte: "Termo de Referência"
+    pagina: 8
+    comentario: Necessário confirmar se os equipamentos atuais atendem a este requisito ou se será preciso adquirir novos.
 
     categoria: riscos
     checklist: 0
-    transcricao: "Nenhum valor será devido referente à Etapa 2 em caso de não atendimento dos parâmetros de qualidade do efluente tratado"
-    comentario: equipe técnica deve avaliar a qualidade do efluente bruto e confirmar a viabilidade de atender aos parâmetros de qualidade exigidos.
+    transcricao: "Multas serão aplicadas em caso de atraso superior a 10 dias na entrega de qualquer etapa."
+    fonte: "Edital"
+    pagina: 15
+    comentario: Avaliar a capacidade de cumprimento dos prazos para evitar penalidades financeiras.
+
+    categoria: medicao
+    checklist: 1
+    transcricao: "A medição será realizada mensalmente, com base no percentual de conclusão física da obra."
+    fonte: "Edital"
+    pagina: 18
+    comentario: Necessário para gerar o cronograma físico-financeiro da obra.
     >>>
 
-    EXEMPLOS NEGATIVOS (NÃO INCLUIR NO OUTPUT):
+    ## EXEMPLOS NEGATIVOS (TRECHOS QUE NÃO DEVEM SER INCLUÍDOS NO RELATÓRIO):
     Trechos pouco relevantes e não acionáveis, sem impacto na submissão de uma boa proposta. Só adicionam ruído, não informação.
 
     <<<
     categoria: outras_informacoes_relevantes
-    checklist_de_proposta: 0
-    transcricao: "A autenticidade deste documento pode ser validada no endereço: https://www.eprotocolo.pr.gov.br/spiweb/validarDocumento com o código: cde7accfe0ff31ccd51064352b08fcf2."
-    comentario: Informação relevante para validação do documento, mas não impacta diretamente a elaboração da proposta.
+    checklist: 0
+    transcricao: "A reunião de abertura será realizada na sede da empresa contratante."
+    fonte: "Agenda de Reuniões"
+    pagina: 3
+    comentario: Informação logística sem impacto direto na proposta.
     >>>
-    Obs: Insignificante. A autenticidade de documentos nesses processos é algo que se assume como premissa.
+    Obs: Detalhes logísticos são importantes para planejamento, mas não afetam a elaboração da proposta.
 
     <<<
     categoria: oportunidades
-    checklist_de_proposta: 0
-    transcricao: "Execução completa da urbanização completa da área da EEE02 compreendendo plantio de grama em leiva, plantio de árvores nativas acima de 1,0m conforme MPS, calçada com piso em concreto desempenado, pintura das estruturas e tubulações aparentes, meio fio com sarjeta, cerca tipo alambrado, portão para veículos, pavimentação através da regularização do subleito e paver."
-    comentario: A urbanização detalhada pode ser uma oportunidade para destacar diferenciais técnicos e estéticos na proposta, agregando valor ao projeto.
+    checklist: 0
+    transcricao: "Possibilidade de extensão do contrato por mais dois anos, dependendo do desempenho."
+    fonte: "Termos de Contrato"
+    pagina: 20
+    comentario: Embora seja uma oportunidade, a extensão depende de fatores externos e não deve ser o foco inicial.
     >>>
-    Obs: Diferenciais qualitativos em partes secundárias do escopo geram pouco valor para o órgão público. Atenção para não desviar o foco do que é essencial."""
+    Obs: Focar em garantir o contrato inicial antes de considerar extensões futuras."""
 )
 
 # Define a json schema for the model response
@@ -89,7 +127,8 @@ extract_and_label_sections_json_schema = {
                         "enum": [
                             "prazos_e_cronograma",
                             "requisitos_tecnicos",
-                            "economicos_financeiros",
+                            "economicos_financeiros_gerais",
+                            "medicao",
                             "riscos",
                             "oportunidades",
                             "outros_requisitos",
@@ -102,12 +141,20 @@ extract_and_label_sections_json_schema = {
                         "description": "1 indicates sections that directly impact the writing and production of a tender proposal/bid, while 0 indicates sections that do not.",
                     },
                     "transcricao": {"type": "string"},
+                    "fonte": {
+                        "type": "string",
+                        "description": "O nome do documento de onde o trecho foi extraído",
+                    },
+                    "pagina": {
+                        "type": "integer",
+                        "description": "A página de onde o trecho foi extraído",
+                    },
                     "comentario": {
                         "type": "string",
                         "description": "Useful and non-obvious comments that raise important points regarding the section. This field is optional and should ONLY be provided if the comment is pertinent and useful. Comments should only be included if and when they add valuable and actionable information, not noise.",
                     },
                 },
-                "required": ["categoria", "checklist", "transcricao"],
+                "required": ["categoria", "checklist", "transcricao", "fonte", "pagina"],
             },
         },
         "overview": {

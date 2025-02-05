@@ -2,6 +2,8 @@ from crewai import Task
 from textwrap import dedent
 from datetime import datetime
 
+from src.tender_analysis_crew.templates.tender_summary_task_template import TENDER_ANALYSIS_FINAL_REPORT_TEMPLATE, TENDER_ANALYSIS_REPORT_DRAFT_TEMPLATE
+
 from .agents import (
     analista_de_licitacoes,
     compilador_de_relatorio,
@@ -10,11 +12,12 @@ from .agents import (
 
 current_time = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
-# TODO: Adicionar ferramenta para cálculo de prazos e datas
 montagem_de_cronograma = Task(
     description=dedent(
         """
-        Selecionar e organizar os prazos e datas MAIS RELEVANTES do edital, sob o ponto de vista de uma empresa decidindo sobre participar ou não da licitação, construindo um cronograma em formato de tabela ou bullet points (desde abertura da licitação até encerramento do contrato).
+        Selecionar e organizar as datas e prazos MAIS RELEVANTES do edital, sob o ponto de vista de uma empresa decidindo sobre participar ou não da licitação, construindo duas tabelas.
+        - Tabela 1 - Processo Licitatório: Lançamento do edital até data da disputa
+        - Tabela 2: Execução do contrato: Prazos e datas relevantes para a execução do objeto contratual. Nota: Como não se pode ter certeza de antemão quando a execução vai iniciar (isso pode ser afetado por recursos administrativos, judiciais, prazos de avaliação de propostas, etc.), costuma-se avaliar o cronograma de execução em termos da data zero, que normalmente é a data de assinatura do contrato e, a partir daí, existem prazos para execução e comprovação das etapas do objeto contratual.
 
         Dados de entrada:
         {cronograma_sections}
@@ -22,19 +25,26 @@ montagem_de_cronograma = Task(
     ),
     expected_output=dedent(
         """
-        # Exemplo de Cronograma
-        | Evento / Data  | Descrição                          |
-        |--------------- |------------------------------------|
-        | 10/01/2025     | Publicação do edital               |
-        | 25/01/2025     | Limite para esclarecimentos        |
-        | 01/02/2025     | Abertura das propostas             |
-        | 15/03/2025     | Início de execução do contrato     |
-        | 15/04/2025     | Aprovação do Projeto Básico        |
-        | 15/06/2025     | Aprovação do Projeto Executivo     |
-        | 15/12/2025     | Término das obras de implantação   |
-        | 15/01/2026     | Término do comissionamento         |
-        | 15/04/2026     | Fim da operação assistida          |
-        | 15/08/2026     | Fim da vigência contratual         |
+        # 1) Processo Licitatório
+        |Data      | Evento                                          |
+        |----------|-------------------------------------------------|
+        |10/01/2025| Publicação do edital                            |
+        |25/01/2025| Data limite para pedidos de esclarecimento      |
+        |01/02/2025| Abertura das propostas                          |
+        |10/02/2025| Data limite para apresentação de recurso admin  |
+
+        # 2) Execução do Contrato
+        | Prazo | Marco Contratual                 | Tipo            | Medição |
+        |-------|----------------------------------|-----------------|---------|
+        | 0     | Assinatura do contrato           | Início          | 0%      |
+        | 30    | Aprovação do Projeto Básico      | Projeto         | 10%     |
+        | 90    | Aprovação do Projeto Executivo   | Projeto         | 20%     |
+        | 180   | Término das obras de implantação | Obras           | 50%     |
+        | 210   | Término do comissionamento       | Comissionamento | 0%      |
+        | 300   | Fim da pré-operação              | Operação        | 10%     |
+        | 300   | Fim da operação assistida        | Operação        | 10%     |
+        | 360   | Fim da vigência contratual       | Encerramento    | 0%      |
+        Nota: Todos os prazos são contados em dias corridos a partir da data de assinatura do contrato.
         """
     ),
     agent=analista_de_licitacoes,
@@ -43,62 +53,23 @@ montagem_de_cronograma = Task(
     human_input=False,
 )
 
-compilacao_de_relatorio = Task(
+esboco_do_relatorio = Task(
     description=dedent(
         """
-        Com base nos resultados validados pela revisão, compile um relatório final contendo:
-        1) Visão Geral do Edital
-        2) Cronograma
-        3) Riscos
-        4) Oportunidades
-        5) Lista de Requisitos por categoria
-        6) Checklist para participação na licitação
+        Fundamentado nos DADOS DE ENTRADA e nos tabelas de cronograma fornecidas, compile um relatório de análise correto, preciso e útil para a empresa interessada em participar da licitação. Siga a estrutura fornecida.
 
-        Dados de entrada:
-        {technical_sections}
-        {overview}
+        <DADOS DE ENTRADA>
+            <VISÃO GERAL>
+            {overview}
+            </VISÃO GERAL>
+
+            <TRECHOS RELEVANTES>
+            {all_sections}
+            </TRECHOS RELEVANTES>
+        </DADOS DE ENTRADA>
         """
     ),
-    expected_output=dedent(
-        """
-        # Relatório Final
-        
-        ## Visão Geral
-        Referência: [Cliente] - [ID da Licitação]
-        Data para submissão de propostas: [Data limite]
-        Objeto da licitação: [Transcrição do objeto da licitação]
-
-        ## Cronograma
-        (Tabela com datas, marcos e prazos)
-
-        ## Riscos
-        [Principais Riscos, Penalidades, Fontes de Incerteza]
-
-        ## Oportunidades
-        [Oportunidades, Bônus, Remuneração Variável]
-
-        ## Requisitos
-        ### Prazos e cronograma
-        - [...]
-
-        ### Requisitos técnicos
-        - [...]
-
-        ### Econômico financeiro
-        - [...]
-
-        ### Outros requisitos
-        - [...]
-
-        ### Outras informações relevantes
-        - [...]
-
-        ## Checklist de Participação
-        - [Lista de documentos necessários]
-        - [Requisitos para proposta]
-        - [Critérios de avaliação]
-        """
-    ),
+    expected_output=TENDER_ANALYSIS_REPORT_DRAFT_TEMPLATE,
     agent=compilador_de_relatorio,
     tools=[],
     async_execution=False,
@@ -106,77 +77,31 @@ compilacao_de_relatorio = Task(
     context=[montagem_de_cronograma],
 )
 
-revisao_de_relatorio = Task(
+# TODO: Corrigir etapa de revisão. A tarefa estava exatamente igual à tarea anterior.
+revisao_final_do_relatorio = Task(
     description=dedent(
         """
-        Com base nos resultados validados pela revisão, compile um relatório final contendo:
-        1) Visão Geral do Edital
-        2) Cronograma
-        3) Riscos
-        4) Oportunidades
-        5) Lista de Requisitos por categoria
-        6) Checklist para participação na licitação
-        7) Glossário
+        - Com base nos dados de entrada e no relatório compilado a partir destes dados, revise e complemento o esboço do relatório para produzir a versão final, que será entrega ao seu Diretor.
+        - Garante que todas as informações estejam CORRETAS, claras e bem estruturadas.
+        - Caso encontre algum erro ou inconsistência, corrija imediatamente.
+        - Adicione comentários e observações relevantes, se necessário.
+        - Reescreva ou reformule trechos ambíguos ou confusos.
 
-        Dados de entrada:
-        {overview}
-        {all_sections}
+        <DADOS DE ENTRADA>
+            <VISÃO GERAL>
+            {overview}
+            </VISÃO GERAL>
+
+            <TRECHOS RELEVANTES>
+            {all_sections}
+            </TRECHOS RELEVANTES>
+        </DADOS DE ENTRADA>
         """
     ),
-    expected_output=dedent(
-        """
-        # Relatório Final
-        
-        ## Visão Geral
-        Referência: [Cliente] - [Número da Licitação]
-        Data para submissão de propostas: [Data limite]
-        Objeto da licitação: [Transcrição do objeto da licitação]
-
-        ## Cronograma
-        (Tabela com datas, marcos e prazos)
-
-        ## Riscos
-        [Principais Riscos, Penalidades, Fontes de Incerteza]
-
-        ## Oportunidades
-        [Oportunidades, Bônus, Remuneração Variável]
-
-        ## Requisitos
-        ### Prazos e cronograma
-        - [...]
-
-        ### Requisitos técnicos
-        - [...]
-
-        ### Econômico financeiro
-        - [...]
-
-        ### Riscos
-        - [...]
-
-        ### Oportunidades
-        - [...]
-
-        ### Outros requisitos
-        - [...]
-
-        ### Outras informações relevantes
-        - [...]
-
-        ## Checklist de Participação
-        - [Lista de documentos necessários]
-        - [Requisitos para proposta]
-        - [Critérios de avaliação]
-
-        ## Glossário
-        - [Termo 1: Definição]
-        - [Termo 2: Definição]
-        - [Termo 3: Definição]
-        """
-    ),
+    expected_output=TENDER_ANALYSIS_FINAL_REPORT_TEMPLATE,
     agent=revisor_de_relatório,
     tools=[],
     async_execution=False,
     human_input=False,
-    context=[montagem_de_cronograma, compilacao_de_relatorio],
+    context=[esboco_do_relatorio],
 )

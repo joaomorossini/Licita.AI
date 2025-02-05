@@ -23,19 +23,20 @@ from src.tender_analysis_crew.templates.extract_and_label_sections_template impo
     extract_and_label_sections_json_schema,
 )
 from src.tender_analysis_crew.agents import (
-    analista_de_licitacoes,
     compilador_de_relatorio,
     revisor_de_relatório,
 )
 from src.tender_analysis_crew.tasks import (
     montagem_de_cronograma,
-    compilacao_de_relatorio,
-    revisao_de_relatorio,
+    esboco_do_relatorio,
+    revisao_final_do_relatorio,
 )
 
 # Load environment variables
 load_dotenv()
 
+# TODO: Selecionar modelos/hiperparametros diferentes para esboço e revisão do relatório
+# TODO: Definir modelos como variáveis de ambiente
 llm = LLM(
     # model="gemini/gemini-1.5-pro-latest",
     model="azure/gpt-4o",
@@ -114,8 +115,8 @@ class TenderAnalysisCrew:
             ],
             tasks=[
                 montagem_de_cronograma,
-                compilacao_de_relatorio,
-                revisao_de_relatorio,
+                esboco_do_relatorio,
+                revisao_final_do_relatorio,
             ],
             process=Process.sequential,
             verbose=True,
@@ -306,6 +307,7 @@ class TenderAnalysisCrew:
                 batch_tasks = []
 
                 # Create tasks for the current batch
+                # TODO: Adicionar chunk_id para identificar e facilitar o refenciamento dos trechos
                 for chunk in batch:
                     task = asyncio.create_task(self._extract_and_label_sections(chunk))
                     batch_tasks.append(task)

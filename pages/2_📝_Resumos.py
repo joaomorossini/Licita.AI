@@ -9,12 +9,11 @@ rootpath.append()
 
 from src.tender_analysis_crew.crew import TenderAnalysisCrew, TenderAnalysisUtils
 
-# PRINCIPAL
+# TO-DO
 ## TODO: Adicionar botão para download do resumo em PDF
 ## TODO: Adicionar botão para adicionar resumo a uma base de conhecimento existente ou criar uma nova
 
-# SECUNDÁRIO
-## TODO: Otimizar formato e instruções do resumo com base nos resumos da Fast
+# SOMEDAY MAYBE
 ## TODO: Utilizar API da Adobe pra ler pdfs complexos, contendo imagens e tabelas: https://opensource.adobe.com/developers.adobe.com/apis/documentcloud/dcsdk/pdf-extract.html
 
 crew = TenderAnalysisCrew()
