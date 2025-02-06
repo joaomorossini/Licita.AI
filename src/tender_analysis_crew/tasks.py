@@ -10,6 +10,9 @@ from .agents import (
     revisor_de_relatório,
 )
 
+from .tools import calculator_tool
+
+
 current_time = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
 montagem_de_cronograma = Task(
@@ -19,44 +22,57 @@ montagem_de_cronograma = Task(
         - Tabela 1 - Processo Licitatório: Lançamento do edital até data da disputa
         - Tabela 2: Execução do contrato: Prazos e datas relevantes para a execução do objeto contratual. Nota: Como não se pode ter certeza de antemão quando a execução vai iniciar (isso pode ser afetado por recursos administrativos, judiciais, prazos de avaliação de propostas, etc.), costuma-se avaliar o cronograma de execução em termos da data zero, que normalmente é a data de assinatura do contrato e, a partir daí, existem prazos para execução e comprovação das etapas do objeto contratual.
 
+        PRESTE MUITA ATENÇÃO
+        1) Os prazos e datas são de extrema importância. Certifique-se de que as datas e prazos estão corretos, ou seja, que foram extraídos do edital cuidadosamente, sem erros de digitação ou interpretação e, em especial, sem alucionações ou suposições. Se houver dúvidas, adicione notas abaixo das tabelas para indicar as dúvidas e as possíveis interpretações.
+        2) A soma dos valores na coluna "Medição" da Tabela 2 deve SEMPRE ser igual a 100%. Use a ferramenta "Calculator" para verificar se a soma está correta.
+
         Dados de entrada:
         {cronograma_sections}
         """
     ),
     expected_output=dedent(
         """
+        IMPORTANTE: Abaixo encontram-se exemplos meramente ilustrativos.
+        SUBSTITUA-OS PELOS DADOS REAIS DA LICITAÇÃO.
+
+        <EXEMPLO TABELA 1>
         # 1) Processo Licitatório
         |Data      | Evento                                          |
         |----------|-------------------------------------------------|
-        |10/01/2025| Publicação do edital                            |
-        |25/01/2025| Data limite para pedidos de esclarecimento      |
-        |01/02/2025| Abertura das propostas                          |
-        |10/02/2025| Data limite para apresentação de recurso admin  |
+        |DD/MM/AAAA| Publicação do edital                            |
+        |DD/MM/AAAA| Data limite para pedidos de esclarecimento      |
+        |DD/MM/AAAA| Abertura das propostas                          |
+        |DD/MM/AAAA| Data limite para apresentação de recurso admin  |
+        </EXEMPLO TABELA 1>
 
+        <EXEMPLO TABELA 2>
         # 2) Execução do Contrato
-        | Prazo | Marco Contratual                 | Tipo            | Medição |
-        |-------|----------------------------------|-----------------|---------|
-        | 0     | Assinatura do contrato           | Início          | 0%      |
-        | 30    | Aprovação do Projeto Básico      | Projeto         | 10%     |
-        | 90    | Aprovação do Projeto Executivo   | Projeto         | 20%     |
-        | 180   | Término das obras de implantação | Obras           | 50%     |
-        | 210   | Término do comissionamento       | Comissionamento | 0%      |
-        | 300   | Fim da pré-operação              | Operação        | 10%     |
-        | 300   | Fim da operação assistida        | Operação        | 10%     |
-        | 360   | Fim da vigência contratual       | Encerramento    | 0%      |
+        | Prazo (dias) | Marco Contratual                 | Tipo            | Medição Evento (%) | Medição Acumulada (%) |
+        |--------------|----------------------------------|-----------------|--------------------|-----------------------|
+        | 0            | Assinatura do contrato           | Início          | 0                  | 0                     |
+        | 30           | Aprovação do Projeto Básico      | Projeto         | 10                 | 10                    |
+        | 90           | Aprovação do Projeto Executivo   | Projeto         | 20                 | 30                    |
+        | 180          | Término das obras de implantação | Obras           | 50                 | 80                    |
+        | 210          | Término do comissionamento       | Comissionamento | 0                  | 80                    |
+        | 300          | Fim da pré-operação              | Operação        | 10                 | 90                    |
+        | 300          | Fim da operação assistida        | Operação        | 10                 | 100                   |
+        | 360          | Fim da vigência contratual       | Encerramento    | 0                  | 100                   |
         Nota: Todos os prazos são contados em dias corridos a partir da data de assinatura do contrato.
+        </EXEMPLO TABELA 2>
         """
     ),
     agent=analista_de_licitacoes,
-    tools=[],
+    tools=[calculator_tool],
     async_execution=False,
     human_input=False,
 )
 
-esboco_do_relatorio = Task(
+esboco_do_relatorio = Task( 
     description=dedent(
         """
         Fundamentado nos DADOS DE ENTRADA e nos tabelas de cronograma fornecidas, compile um relatório de análise correto, preciso e útil para a empresa interessada em participar da licitação. Siga a estrutura fornecida.
+
+        EVITE incluir informações óbvias ou irrelevantes, especialmente aquelas que são verdadeiras para todas as licitações. Por exemplo, não é necessário adicionar observações como "o não cumprimento do contrato pode resultar em penalidades" ou "condições climáticas podem afetar a execução das obras". Leve em consideração que esse relatório é destinado a uma equipe experiente no assunto.
 
         <DADOS DE ENTRADA>
             <VISÃO GERAL>
@@ -77,7 +93,7 @@ esboco_do_relatorio = Task(
     context=[montagem_de_cronograma],
 )
 
-# TODO: Corrigir etapa de revisão. A tarefa estava exatamente igual à tarea anterior.
+# TODO: IMPROVE revision task to add more value to the final report
 revisao_final_do_relatorio = Task(
     description=dedent(
         """

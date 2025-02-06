@@ -23,6 +23,7 @@ from src.tender_analysis_crew.templates.extract_and_label_sections_template impo
     extract_and_label_sections_json_schema,
 )
 from src.tender_analysis_crew.agents import (
+    analista_de_licitacoes,
     compilador_de_relatorio,
     revisor_de_relatório,
 )
@@ -110,6 +111,7 @@ class TenderAnalysisCrew:
         self.env = os.getenv("ENVIRONMENT", "prod")
         self.crew = Crew(
             agents=[
+                analista_de_licitacoes,
                 compilador_de_relatorio,
                 revisor_de_relatório,
             ],
@@ -263,7 +265,7 @@ class TenderAnalysisCrew:
         self,
         tender_documents_text: str,
         progress_callback: Optional[Callable[[int], None]] = None,
-        max_concurrent_chunks: int = 10,
+        max_concurrent_chunks: int = int(os.getenv("TENDER_ANALYSIS_MAX_CONCURRENT_CHUNKS", 10)),
     ) -> str:
         """Generate a summary of tender documents.
 
