@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+import tempfile
 from typing import List, Dict, Optional, Callable, Any
 import re
 from dataclasses import dataclass
@@ -14,9 +17,13 @@ import streamlit as st
 import json
 
 from .tender_notice_templates import (
+    COMPANY_BUSINESS_DESCRIPTION,
     TENDER_NOTICE_EXTRACTION_SCHEMA,
     TENDER_NOTICE_EXTRACTION_PROMPT,
+    TENDER_NOTICE_LABELING_TEMPLATE,
 )
+
+load_dotenv()
 
 # Configure logging to only show INFO and above
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,21 +44,14 @@ class TenderNotice:
 class TenderNoticeProcessor:
     """Processes tender notices from email PDFs."""
     
-    def __init__(self, batch_size: int = 5):
-        # Initialize LLM for extraction
-        self.extraction_llm = AzureChatOpenAI(
+    def __init__(self, batch_size: int = int(os.getenv("TENDER_NOTICE_PROCESSOR_BATCH_SIZE", 10))):
+        self.llm = AzureChatOpenAI(
             model="gpt-4o",
             azure_deployment="gpt-4o",
-            temperature=0
-        ).with_structured_output(TENDER_NOTICE_EXTRACTION_SCHEMA)
-        
-        # Initialize LLM for labeling
-        self.labeling_llm = AzureChatOpenAI(
-            model="gpt-4o",
-            azure_deployment="gpt-4o",
-            temperature=0
+            temperature=0,
+            seed=42,
         )
-        
+        self.extraction_llm = self.llm.with_structured_output(TENDER_NOTICE_EXTRACTION_SCHEMA)
         self.batch_size = batch_size
 
     async def _extract_tender_notices(self, text: str) -> List[Dict[str, Any]]:
@@ -91,7 +91,7 @@ class TenderNoticeProcessor:
                 company_business_description=company_description,
                 tender_notice=notice_text
             )
-            tasks.append(self.labeling_llm.ainvoke(messages))
+            tasks.append(self.llm.ainvoke(messages))
         
         # Process all tasks in parallel
         responses = await asyncio.gather(*tasks)
@@ -172,6 +172,75 @@ class TenderNoticeProcessor:
         except Exception as e:
             logging.error(f"Error processing PDF: {str(e)}")
             raise
+
+    async def process_all_pdfs(self, files):
+        """Process multiple PDFs asynchronously."""
+        try:
+            # Initialize processor with correct model settings
+            processor = TenderNoticeProcessor()
+            
+            # Process each PDF
+            all_tenders = []
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            for i, file in enumerate(files):
+                try:
+                    # Save uploaded file temporarily
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        tmp_file.write(file.getvalue())
+                        tmp_path = tmp_file.name
+                    
+                    try:
+                        # Update status
+                        status_text.text(f"Processando {file.name}...")
+                        
+                        # Process PDF
+                        df = await processor.process_pdf(
+                            pdf_path=tmp_path,
+                            template=TENDER_NOTICE_LABELING_TEMPLATE,
+                            company_description=COMPANY_BUSINESS_DESCRIPTION,
+                            max_concurrent_chunks=int(os.getenv("TENDER_NOTICE_MAX_CONCURRENT_CHUNKS", 5)),
+                        )
+                        
+                        if not df.empty:
+                            # Add source information
+                            df['source_file'] = file.name
+                            df['processed_at'] = datetime.now()
+                            all_tenders.append(df)
+                        
+                    finally:
+                        # Clean up temp file
+                        os.unlink(tmp_path)
+                    
+                except Exception as e:
+                    st.error(f"Erro ao processar {file.name}: {str(e)}")
+                    if os.getenv("ENVIRONMENT") == "dev":
+                        st.exception(e)
+                    continue
+                
+                # Update progress
+                progress = (i + 1) / len(files)
+                progress_bar.progress(progress)
+            
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Combine all results
+            if all_tenders:
+                df = pd.concat(all_tenders, ignore_index=True)
+                return df
+                
+            return pd.DataFrame()
+            
+        except Exception as e:
+            st.error(f"Erro ao processar os boletins: {str(e)}")
+            if os.getenv("ENVIRONMENT") == "dev":
+                st.exception(e)
+            return pd.DataFrame()
+
+
 
 if __name__ == "__main__":
     import sys
