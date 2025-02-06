@@ -45,38 +45,38 @@ extract_and_label_sections_template = dedent(
     - 'comentario': Opcional. Adicione apenas comentários de alta relevância, sobre os quais a empresa possa tomar ações e decisões concretas.
 
     # EXEMPLOS
+    Importante: Todos estes exemplos são meramente ilustrativos. Os trechos reais devem ser extraídos dos documentos da licitação.
 
-    ## EXEMPLOS POSITIVOS (TRECHOS QUE DEVEM SER INCLUÍDOS NO RELATÓRIO):
+    ## EXEMPLOS POSITIVOS:
     Trechos relevantes e acionáveis, que impactam diretamente a decisão sobre participar da licitação e aumentam as chances de submissão de uma proposta competitiva.
 
     <<<
     categoria: prazos_e_cronograma
     checklist: 1
-    transcricao: "Entrega da proposta até 15 de março de 2025."
+    transcricao: "Entrega da proposta até a data [DD/MM/AAAA]."
     fonte: "Edital"
     pagina: 12
-    comentario: Verificar se a data coincide com o calendário interno da empresa para evitar conflitos.
 
     categoria: economicos_financeiros_gerais
     checklist: 1
-    transcricao: "O pagamento será realizado em três parcelas iguais, a primeira após a entrega do projeto."
+    transcricao: "O pagamento será realizado em até 30 dias após a aprovação da fatura."
     fonte: "Edital"
     pagina: 5
     comentario: Importante para o planejamento financeiro e fluxo de caixa da empresa.
 
     categoria: requisitos_tecnicos
     checklist: 1
-    transcricao: "Os sistemas de bombeamento devem ter capacidade mínima de 5000 litros por hora."
+    transcricao: "Os sistemas de bombeamento devem ter capacidade mínima de XXXX litros por hora."
     fonte: "Termo de Referência"
     pagina: 8
-    comentario: Necessário confirmar se os equipamentos atuais atendem a este requisito ou se será preciso adquirir novos.
+    comentario: Confirmar se os prazos de entrega desse tipo de equipamento atendem ao cronograma da obra
 
     categoria: riscos
     checklist: 0
-    transcricao: "Multas serão aplicadas em caso de atraso superior a 10 dias na entrega de qualquer etapa."
+    transcricao: "A contratada perderá o direito à remuneração variável da Fase 3 caso não alcance os índices de desempenho estabelecidos..."
     fonte: "Edital"
     pagina: 15
-    comentario: Avaliar a capacidade de cumprimento dos prazos para evitar penalidades financeiras.
+    comentario: O não atendimento dos índices de desempenho pode
 
     categoria: medicao
     checklist: 1
@@ -86,7 +86,7 @@ extract_and_label_sections_template = dedent(
     comentario: Necessário para gerar o cronograma físico-financeiro da obra.
     >>>
 
-    ## EXEMPLOS NEGATIVOS (TRECHOS QUE NÃO DEVEM SER INCLUÍDOS NO RELATÓRIO):
+    ## EXEMPLOS NEGATIVOS:
     Trechos pouco relevantes e não acionáveis, sem impacto na submissão de uma boa proposta. Só adicionam ruído, não informação.
 
     <<<
