@@ -45,6 +45,7 @@ with st.sidebar:
 st.title("Assistente de Licitações 💬")
 st.divider()
 
+# TODO: Mock authentication for Dify. Do not expose Fast's conversations
 # TODO: Apply styling to the iframe to match the app's design
 # Embed the iframe with styling
 iframe_style = """
@@ -70,6 +71,7 @@ components.html(
 
 st.divider()
 
+# TODO: Permitir a criação de outras bases de conhecimento, não diretamente relacionadas a licitações
 st.subheader("Criar Nova Base de Conhecimento")
 
 # Initialize Dify client

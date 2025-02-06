@@ -1,3 +1,5 @@
+# TODO: NÃO EXIBIR MENSAGENS DE ERRO DE CARÁTER TÉCNICO NO FRONTEND. APENAS MENSAGENS DE ERRO AMIGÁVEIS AO USUÁRIO.
+
 """Main page of the Licita.AI application."""
 
 import os
@@ -130,6 +132,7 @@ with col5:
 
 st.divider()
 
+# TODO: Incluir atualizações de 06/02/2025
 st.subheader("Novidades e Atualizações 🆕")
 
 st.markdown(
