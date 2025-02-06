@@ -36,19 +36,16 @@ from src.tender_analysis_crew.tasks import (
 # Load environment variables
 load_dotenv()
 
-# TODO: Selecionar modelos/hiperparametros diferentes para esboço e revisão do relatório
-# TODO: Definir modelos como variáveis de ambiente
-llm = LLM(
-    # model="gemini/gemini-1.5-pro-latest",
-    model="azure/gpt-4o",
-    temperature=0.2,
-)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
+llm = LLM(
+    model=int(os.getenv("TENDER_ANALYSIS_CREW_MANAGER_MODEL", "azure/gpt-4o")),
+    temperature=float(os.getenv("TENDER_ANALYSIS_CREW_MANAGER_TEMPERATURE", 0.2)),
+)
 
 class TenderAnalysisUtils:
     @staticmethod
