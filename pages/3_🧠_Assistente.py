@@ -113,7 +113,7 @@ if uploaded_files:
         use_container_width=True,
     ):
         # TODO: Validate that dataset name is no more than 40 characters long
-        dataset_name = f"|{cliente}-{referencia}-{id_licitacao}|"
+        dataset_name = f"|{cliente}-{referencia}-{id_licitacao}"
 
         with st.spinner("Criando base de conhecimento..."):
             try:
@@ -139,7 +139,7 @@ if uploaded_files:
                         # Clean up the temporary file
                         os.unlink(tmp_file.name)
 
-                st.success("Base de conhecimento criada com sucesso!")
+                st.toast("Base de conhecimento criada com sucesso!")
                 st.rerun()
 
             except Exception as e:
@@ -172,7 +172,7 @@ try:
                 tender_name = dataset["name"].replace("|", "").strip()
 
                 with st.expander(
-                    f"**Status**: {status_text} {status_icon}     •     **Id Licitação**: {tender_name}",
+                    f"**Status**: {status_text} {status_icon}     •     **Licitação**: {tender_name}",
                     expanded=False,
                 ):
                     # Clean up description text
@@ -219,7 +219,7 @@ try:
                                             if dify_client.delete_document(
                                                 dataset["id"], file["id"]
                                             ):
-                                                st.success(
+                                                st.toast(
                                                     "Documento excluído com sucesso!"
                                                 )
                                                 st.rerun()
@@ -246,7 +246,7 @@ try:
                 ):
                     try:
                         if dify_client.delete_dataset(dataset["id"]):
-                            st.success("Base de conhecimento excluída com sucesso!")
+                            st.toast("Base de conhecimento excluída com sucesso!")
                             st.rerun()
                     except Exception as e:
                         st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
@@ -296,7 +296,7 @@ try:
                                     # Clean up the temporary file
                                     os.unlink(tmp_file.name)
 
-                            st.success("Arquivos adicionados com sucesso!")
+                            st.toast("Arquivos adicionados com sucesso!")
                             st.session_state.show_upload_form = False
                             st.rerun()
 
