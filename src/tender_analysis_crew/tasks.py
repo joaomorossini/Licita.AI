@@ -24,7 +24,7 @@ montagem_de_cronograma = Task(
 
         PRESTE MUITA ATENÇÃO
         1) Os prazos e datas são de extrema importância. Certifique-se de que as datas e prazos estão corretos, ou seja, que foram extraídos do edital cuidadosamente, sem erros de digitação ou interpretação e, em especial, sem alucionações ou suposições. Se houver dúvidas, adicione notas abaixo das tabelas para indicar as dúvidas e as possíveis interpretações.
-        2) A soma dos valores na coluna "Medição" da Tabela 2 deve SEMPRE ser igual a 100%. Use a ferramenta "Calculator" para verificar se a soma está correta.
+        2) A soma dos valores na coluna "Medição" da Tabela 2 deve SEMPRE ser igual a 100%. Use a ferramenta "Calculator" para verificar se a soma está correta. Caso as informações disponíveis não totalizem 100%, elimine as colunas "Medição Evento (%)" e "Medição Acumulada (%)" e adicione uma nota explicativa (com um emoji de warning), contendo as informações disponíveis.
 
         Dados de entrada:
         {cronograma_sections}
@@ -93,6 +93,7 @@ esboco_do_relatorio = Task(
     context=[montagem_de_cronograma],
 )
 
+# TODO: Adicionar ferramenta para obtenção de feedback humano
 # TODO: IMPROVE revision task to add more value to the final report
 revisao_final_do_relatorio = Task(
     description=dedent(

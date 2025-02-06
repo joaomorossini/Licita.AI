@@ -7,26 +7,31 @@ TENDER_ANALYSIS_REPORT_DRAFT_TEMPLATE = dedent(
         
         ## Visão Geral
         Referência: [Cliente] - [ID da Licitação]
-        Data para submissão de propostas: [Data limite]
-        
-        ### Objeto da licitação
-        # [Transcrição do objeto da licitação]
+        Data da disputa: [Data limite]
+        Objeto da licitação: [Transcrição COMPLETA do objeto da licitação]
 
         ---
 
         ## Cronograma
-        [Tabelas 1 e 2 com datas, marcos e prazos]
+        
+        ### Tabela 1) Processo Licitatório
+        [Datas e prazos do processo licitatório] 
+        
+        ###  Tabela 2) Execução do Contrato
+        [Prazos, marcos contratuais, tipos de eventos de medição, percentuais de medição por evento e acumulados]
 
-        ## Medição
+        #### Medição
         [Descrição dos eventos de medição e percentuais de pagamento. Medição é um jargão do segmento de obras de engenharia/formecimento de equipamentos, que se refere à mensuração do avanço físico do contrato, para fins de faturamento e pagamento. Alguns contratos preveem medições mensais de acordo com quantitativos detalhados, porém o mais comum é estabelecer eventos de medição que, ao serem executados e comprovados, dão direito ao contratado de receber um percentual do valor total do contrato.]
 
-        ## Pagamento
+        #### Pagamento
         [Prazo de pagamento (Exemplos: a) 30 dias após a aprovação da fatura, b) 60 dias após a entrega do equipamento), garantias e retenções (Ex.: retenção de 5% do valor total do contrato até a entrega final), fonte dos recursos, outros detalhes relevantes]
+
+        ---
 
         ## Riscos
         
         ### Penalidades
-        [Descrição das penalidades por atraso, não conformidade, etc. incluindo valores por dia, valores máximos, suspensões e outras sanções relevantes]
+        [Descrição das penalidades potencialmente aplicáveis AO CONTRATADO por atraso, não conformidade, etc. incluindo valores por dia, valores máximos, suspensões e outras sanções relevantes]
         
         ### Garantias
         [Tipo, valor e condições de garantias exigidas, como caução, seguro-garantia, fiança bancária, etc.]
@@ -62,5 +67,9 @@ TENDER_ANALYSIS_REPORT_DRAFT_TEMPLATE = dedent(
 
 # TODO: IMPROVE THIS WITH FOOTNOTES AND CROSS REFERENCES TO CHUNK_IDS
 TENDER_ANALYSIS_FINAL_REPORT_TEMPLATE = dedent(f"""
-    {TENDER_ANALYSIS_REPORT_DRAFT_TEMPLATE}
+<TEMPLATE>
+{TENDER_ANALYSIS_REPORT_DRAFT_TEMPLATE}
+</TEMPLATE>
+
+Importante: O resultado final da tarefa é APENAS o relatório final revisado, sem nenhum comentário ou preambulo.
     """)

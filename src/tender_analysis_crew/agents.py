@@ -41,6 +41,7 @@ compilador_de_relatorio = Agent(
     allow_delegation=False,
 )
 
+# TODO: Equip this agent with the capacity to perform semantic search on the tender documents to validate and enhance the final report
 revisor_de_relatório = Agent(
     role="Revisor de Relatórios de Licitações",
     goal=(

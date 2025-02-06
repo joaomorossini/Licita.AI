@@ -4,6 +4,11 @@ import rootpath
 import asyncio
 import os
 import logging
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
 rootpath.append()
 
@@ -19,6 +24,66 @@ from src.tender_analysis_crew.crew import TenderAnalysisCrew, TenderAnalysisUtil
 crew = TenderAnalysisCrew()
 utils = TenderAnalysisUtils()
 logger = logging.getLogger(__name__)
+
+def markdown_to_pdf(markdown_text: str | object) -> BytesIO:
+    """Convert markdown text to PDF.
+    
+    Args:
+        markdown_text: The markdown text to convert (can be string or CrewOutput object)
+        
+    Returns:
+        BytesIO: PDF file as bytes
+    """
+    # Convert to string if needed
+    text_content = str(markdown_text)
+    
+    # Create a BytesIO buffer to receive PDF data
+    buffer = BytesIO()
+    
+    # Create the PDF document
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    normal_style = styles['Normal']
+    
+    # Create custom style for better readability
+    custom_style = ParagraphStyle(
+        'CustomStyle',
+        parent=normal_style,
+        spaceBefore=10,
+        spaceAfter=10,
+        leading=14,
+    )
+    
+    # Convert markdown to PDF elements
+    elements = []
+    
+    # Split text into paragraphs and process each
+    paragraphs = text_content.split('\n')
+    for paragraph in paragraphs:
+        if paragraph.strip():  # Skip empty lines
+            # Clean up any XML-unsafe characters
+            cleaned_text = (
+                paragraph.replace('&', '&amp;')
+                .replace('<', '&lt;')
+                .replace('>', '&gt;')
+            )
+            p = Paragraph(cleaned_text, custom_style)
+            elements.append(p)
+            elements.append(Spacer(1, 0.1 * inch))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 
 # Configure page
 st.set_page_config(
@@ -211,6 +276,17 @@ if st.button(
 
 if st.session_state.summary:
     st.markdown(st.session_state.summary)
+    
+    # Add download button
+    pdf_buffer = markdown_to_pdf(st.session_state.summary)
+    st.download_button(
+        label="⬇️ Baixar PDF",
+        data=pdf_buffer,
+        file_name="resumo_licitacao.pdf",
+        mime="application/pdf",
+        type="primary",
+        use_container_width=True,
+    )
 
 # Display detailed error information if available
 if st.session_state.error_details and os.getenv("ENVIRONMENT") == "dev":

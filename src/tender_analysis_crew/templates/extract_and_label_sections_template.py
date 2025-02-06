@@ -22,12 +22,19 @@ extract_and_label_sections_template = dedent(
     
     ## Categorias disponíveis:
     - prazos_e_cronograma
-    - requisitos_tecnicos
-    - economicos_financeiros_gerais
-    - medicao
+    - caracteristicas_tecnicas
+        - tecnologia_e_processo
+        - caracteristicas_entrada
+        - caracteristicas_saida
+    - economicos_financeiros
+    - medicao_e_pagamento
     - riscos
+        - penalidades
+        - garantias
+        - licencas_e_alvaras
+        - outros_riscos
     - oportunidades
-    - outros_requisitos
+    - checklist_participacao
     - outras_informacoes_relevantes
 
     Nota: Em relação à categoria 'prazos_e_cronograma', extraia APENAS as datas ou prazos relevantes para as fases principais da licitação e da execução do objeto contratual.
@@ -38,10 +45,12 @@ extract_and_label_sections_template = dedent(
 
     ## Output Esperado
     Um compilado estruturado dos trechos MAIS RELEVANTES da licitação, cada um com os tópicos
-    - 'categoria'
-    - 'transcricao'
-    - 'fonte': O nome do documento de onde o trecho foi extraído
-    - 'pagina': A página de onde o trecho foi extraído
+    - 'categoria': Categoria principal do trecho (OBRIGATÓRIO)
+    - 'subcategoria': Opcional. Usado apenas para categorias hierárquicas como riscos e características técnicas
+    - 'checklist': 1 se o trecho impacta diretamente a elaboração da proposta, 0 caso contrário (OBRIGATÓRIO)
+    - 'transcricao': O trecho extraído do documento (OBRIGATÓRIO)
+    - 'fonte': O nome do documento de onde o trecho foi extraído (OBRIGATÓRIO)
+    - 'pagina': A página de onde o trecho foi extraído (OBRIGATÓRIO)
     - 'comentario': Opcional. Adicione apenas comentários de alta relevância, sobre os quais a empresa possa tomar ações e decisões concretas.
 
     # EXEMPLOS
@@ -51,63 +60,41 @@ extract_and_label_sections_template = dedent(
     Trechos relevantes e acionáveis, que impactam diretamente a decisão sobre participar da licitação e aumentam as chances de submissão de uma proposta competitiva.
 
     <<<
-    categoria: prazos_e_cronograma
+    categoria: caracteristicas_tecnicas
+    subcategoria: tecnologia_e_processo
     checklist: 1
-    transcricao: "Entrega da proposta até a data [DD/MM/AAAA]."
-    fonte: "Edital"
-    pagina: 12
-
-    categoria: economicos_financeiros_gerais
-    checklist: 1
-    transcricao: "O pagamento será realizado em até 30 dias após a aprovação da fatura."
-    fonte: "Edital"
-    pagina: 5
-    comentario: Importante para o planejamento financeiro e fluxo de caixa da empresa.
-
-    categoria: requisitos_tecnicos
-    checklist: 1
-    transcricao: "Os sistemas de bombeamento devem ter capacidade mínima de XXXX litros por hora."
+    transcricao: "O sistema de tratamento deve utilizar tecnologia de membranas de ultrafiltração com capacidade mínima de 100m³/h"
     fonte: "Termo de Referência"
     pagina: 8
-    comentario: Confirmar se os prazos de entrega desse tipo de equipamento atendem ao cronograma da obra
+    comentario: Verificar disponibilidade de membranas com fornecedores homologados
 
     categoria: riscos
-    checklist: 0
-    transcricao: "A contratada perderá o direito à remuneração variável da Fase 3 caso não alcance os índices de desempenho estabelecidos..."
-    fonte: "Edital"
-    pagina: 15
-    comentario: O não atendimento dos índices de desempenho pode
-
-    categoria: medicao
+    subcategoria: penalidades
     checklist: 1
-    transcricao: "A medição será realizada mensalmente, com base no percentual de conclusão física da obra."
+    transcricao: "Multa de 0,5% por dia de atraso, limitada a 10% do valor total do contrato"
+    fonte: "Minuta do Contrato"
+    pagina: 15
+    comentario: Impacto financeiro significativo - considerar no planejamento de contingências
+
+    categoria: medicao_e_pagamento
+    checklist: 1
+    transcricao: "Medições mensais com pagamento em 30 dias após aprovação"
     fonte: "Edital"
     pagina: 18
-    comentario: Necessário para gerar o cronograma físico-financeiro da obra.
+    comentario: Fluxo de caixa favorável - pagamentos regulares
     >>>
 
     ## EXEMPLOS NEGATIVOS:
-    Trechos pouco relevantes e não acionáveis, sem impacto na submissão de uma boa proposta. Só adicionam ruído, não informação.
+    Trechos pouco relevantes e não acionáveis, sem impacto na submissão de uma boa proposta.
 
     <<<
     categoria: outras_informacoes_relevantes
     checklist: 0
-    transcricao: "A reunião de abertura será realizada na sede da empresa contratante."
-    fonte: "Agenda de Reuniões"
+    transcricao: "A visita técnica é opcional"
+    fonte: "Edital"
     pagina: 3
-    comentario: Informação logística sem impacto direto na proposta.
-    >>>
-    Obs: Detalhes logísticos são importantes para planejamento, mas não afetam a elaboração da proposta.
-
-    <<<
-    categoria: oportunidades
-    checklist: 0
-    transcricao: "Possibilidade de extensão do contrato por mais dois anos, dependendo do desempenho."
-    fonte: "Termos de Contrato"
-    pagina: 20
-    comentario: Embora seja uma oportunidade, a extensão depende de fatores externos e não deve ser o foco inicial.
-    >>>
-    Obs: Focar em garantir o contrato inicial antes de considerar extensões futuras."""
+    comentario: Informação administrativa sem impacto direto na proposta
+    >>>"""
 )
 
 # Define a json schema for the model response
@@ -126,35 +113,54 @@ extract_and_label_sections_json_schema = {
                         "type": "string",
                         "enum": [
                             "prazos_e_cronograma",
-                            "requisitos_tecnicos",
-                            "economicos_financeiros_gerais",
-                            "medicao",
+                            "caracteristicas_tecnicas",
+                            "economicos_financeiros",
+                            "medicao_e_pagamento",
                             "riscos",
                             "oportunidades",
-                            "outros_requisitos",
+                            "checklist_participacao",
                             "outras_informacoes_relevantes",
                         ],
+                        "description": "Main category of the extracted section",
+                    },
+                    "subcategoria": {
+                        "type": "string",
+                        "enum": [
+                            "tecnologia_e_processo",
+                            "caracteristicas_entrada",
+                            "caracteristicas_saida",
+                            "penalidades",
+                            "garantias",
+                            "licencas_e_alvaras",
+                            "outros_riscos",
+                            None,
+                        ],
+                        "description": "Optional subcategory for hierarchical categories like risks and technical characteristics",
                     },
                     "checklist": {
                         "type": "integer",
                         "enum": [0, 1],
                         "description": "1 indicates sections that directly impact the writing and production of a tender proposal/bid, while 0 indicates sections that do not.",
                     },
-                    "transcricao": {"type": "string"},
+                    "transcricao": {
+                        "type": "string",
+                        "description": "The extracted text from the document",
+                    },
                     "fonte": {
                         "type": "string",
-                        "description": "O nome do documento de onde o trecho foi extraído",
+                        "description": "The name of the document from which the section was extracted",
                     },
                     "pagina": {
                         "type": "integer",
-                        "description": "A página de onde o trecho foi extraído",
+                        "description": "The page number from which the section was extracted",
                     },
                     "comentario": {
-                        "type": "string",
-                        "description": "Useful and non-obvious comments that raise important points regarding the section. This field is optional and should ONLY be provided if the comment is pertinent and useful. Comments should only be included if and when they add valuable and actionable information, not noise.",
+                        "type": ["string", "null"],
+                        "description": "Optional. Useful and non-obvious comments that raise important points regarding the section. This field should ONLY be provided if the comment is pertinent and useful.",
                     },
                 },
                 "required": ["categoria", "checklist", "transcricao", "fonte", "pagina"],
+                "additionalProperties": False,
             },
         },
         "overview": {
@@ -172,7 +178,9 @@ extract_and_label_sections_json_schema = {
                 },
             },
             "required": ["client_name", "tender_id", "tender_object"],
+            "additionalProperties": False,
         },
     },
     "required": ["sections", "overview"],
+    "additionalProperties": False,
 }
