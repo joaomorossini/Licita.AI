@@ -139,11 +139,11 @@ if uploaded_files:
                         # Clean up the temporary file
                         os.unlink(tmp_file.name)
 
-                st.toast("Base de conhecimento criada com sucesso!")
+                st.toast("Base de conhecimento criada com sucesso!", icon="✅")
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Erro ao criar base de conhecimento: {str(e)}")
+                st.toast(f"Erro ao criar base de conhecimento: {str(e)}", icon="⚠️")
 else:
     st.info("⬆️ Faça upload dos documentos da licitação para continuar")
 
@@ -219,14 +219,10 @@ try:
                                             if dify_client.delete_document(
                                                 dataset["id"], file["id"]
                                             ):
-                                                st.toast(
-                                                    "Documento excluído com sucesso!"
-                                                )
+                                                st.toast("Documento excluído com sucesso!", icon="✅")
                                                 st.rerun()
                                         except Exception as e:
-                                            st.error(
-                                                f"Erro ao excluir documento: {str(e)}"
-                                            )
+                                            st.toast(f"Erro ao excluir documento: {str(e)}", icon="⚠️")
 
             with col2:
                 # Add files button with plus sign icon
@@ -246,10 +242,10 @@ try:
                 ):
                     try:
                         if dify_client.delete_dataset(dataset["id"]):
-                            st.toast("Base de conhecimento excluída com sucesso!")
+                            st.toast("Base de conhecimento excluída com sucesso!", icon="✅")
                             st.rerun()
                     except Exception as e:
-                        st.error(f"Erro ao excluir base de conhecimento: {str(e)}")
+                        st.toast(f"Erro ao excluir base de conhecimento: {str(e)}", icon="⚠️")
 
     # Add files form (shown when add_files button is clicked)
     if (
@@ -296,12 +292,12 @@ try:
                                     # Clean up the temporary file
                                     os.unlink(tmp_file.name)
 
-                            st.toast("Arquivos adicionados com sucesso!")
+                            st.toast("Arquivos adicionados com sucesso!", icon="✅")
                             st.session_state.show_upload_form = False
                             st.rerun()
 
                         except Exception as e:
-                            st.error(f"Erro ao adicionar arquivos: {str(e)}")
+                            st.toast(f"Erro ao adicionar arquivos: {str(e)}", icon="⚠️")
 
         with col2:
             if st.button("Cancelar", use_container_width=True):
@@ -309,4 +305,4 @@ try:
                 st.rerun()
 
 except Exception as e:
-    st.error(f"Erro ao carregar bases de conhecimento: {str(e)}")
+    st.toast(f"Erro ao carregar bases de conhecimento: {str(e)}", icon="⚠️")
