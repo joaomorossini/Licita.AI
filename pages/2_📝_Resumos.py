@@ -9,9 +9,6 @@ rootpath.append()
 
 from src.tender_analysis_crew.crew import TenderAnalysisCrew, TenderAnalysisUtils
 
-# URGENT
-# TODO: Figure out why some documents cause the process to error out
-
 # TO-DO
 ## TODO: Adicionar botão para download do resumo em PDF
 ## TODO: Adicionar botão para adicionar resumo a uma base de conhecimento existente ou criar uma nova
