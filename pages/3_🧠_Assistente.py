@@ -90,12 +90,27 @@ with st.container():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        cliente = st.text_input("Cliente", key="cliente")
+        cliente = st.text_input("Cliente", key="cliente", placeholder="[Cliente]")
     with col2:
-        referencia = st.text_input("Referência", key="referencia")
+        referencia = st.text_input("Referência", key="referencia", placeholder="[Referência]")
     with col3:
-        id_licitacao = st.text_input("ID", key="id")
+        id_licitacao = st.text_input("ID", key="id", placeholder="[ID]")
 
+    # Dynamically construct the dataset name with placeholders
+    dataset_name = f"{cliente or '[Cliente]'}-{referencia or '[Referência]'}-{id_licitacao or '[ID]'}"
+    dataset_length = len(dataset_name)
+
+    # Display the dataset name preview to the right of "Nome"
+    st.markdown(f"Nome da nova base: <span style='color:#6B46C1;'>{dataset_name}</span>", unsafe_allow_html=True)
+
+    # Show a warning only if the dataset name exceeds 40 characters
+    if dataset_length > 40:
+        st.warning(
+            f"O nome excedeu o limite de caracteres. "
+            f"Remova {dataset_length - 40} caracteres para continuar."
+        )
+
+    # File uploader
     uploaded_files = st.file_uploader(
         "Documentos da Licitação (PDF)",
         type=["txt", "markdown", "mdx", "pdf", "html", "xlsx", "xls", "docx", "csv", "md"],
@@ -105,16 +120,13 @@ with st.container():
 
 # Submit button outside the form
 if uploaded_files:
-    submit_disabled = not (cliente and referencia and id_licitacao)
+    submit_disabled = not (cliente and referencia and id_licitacao) or dataset_length > 40
     if st.button(
         "Criar Nova Base de Conhecimento",
         type="primary",
         disabled=submit_disabled,
         use_container_width=True,
     ):
-        # TODO: Validate that dataset name is no more than 40 characters long
-        dataset_name = f"|{cliente}-{referencia}-{id_licitacao}"
-
         with st.spinner("Criando base de conhecimento..."):
             try:
                 # Create dataset
