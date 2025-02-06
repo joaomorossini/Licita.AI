@@ -43,7 +43,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 llm = LLM(
-    model=int(os.getenv("TENDER_ANALYSIS_CREW_MANAGER_MODEL", "azure/gpt-4o")),
+    model=os.getenv("TENDER_ANALYSIS_CREW_MANAGER_MODEL", "azure/gpt-4o"),
     temperature=float(os.getenv("TENDER_ANALYSIS_CREW_MANAGER_TEMPERATURE", 0.2)),
 )
 
