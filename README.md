@@ -52,6 +52,6 @@ Licita.AI/
 
 ### Poetry Export Command!
 
-```bash
+```zsh
 export POETRY_VIRTUALENVS_PATH=/Users/morossini/anaconda3/envs/licita-ai-new
 ```
