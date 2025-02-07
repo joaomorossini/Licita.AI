@@ -99,17 +99,17 @@ with st.container():
         id_licitacao = st.text_input("ID", key="id", placeholder="[ID]")
 
     # Dynamically construct the dataset name with placeholders
-    dataset_name = f"{cliente or '[Cliente]'}-{referencia or '[Referência]'}-{id_licitacao or '[ID]'}"
-    dataset_length = len(dataset_name)
+    dataset_name = f"|{cliente or '[Cliente]'}-{referencia or '[Referência]'}-{id_licitacao or '[ID]'}"
+    dataset_name_length = len(dataset_name)
 
     # Display the dataset name preview to the right of "Nome"
     st.markdown(f"Nome da nova base: <span style='color:#6B46C1;'>{dataset_name}</span>", unsafe_allow_html=True)
 
     # Show a warning only if the dataset name exceeds 40 characters
-    if dataset_length > 40:
+    if dataset_name_length > 40:
         st.warning(
             f"O nome excedeu o limite de caracteres. "
-            f"Remova {dataset_length - 40} caracteres para continuar."
+            f"Remova {dataset_name_length - 40} caracteres para continuar."
         )
 
     # File uploader
@@ -122,7 +122,7 @@ with st.container():
 
 # Submit button outside the form
 if uploaded_files:
-    submit_disabled = not (cliente and referencia and id_licitacao) or dataset_length > 40
+    submit_disabled = not (cliente and referencia and id_licitacao) or dataset_name_length > 40
     if st.button(
         "Criar Nova Base de Conhecimento",
         type="primary",
@@ -132,7 +132,7 @@ if uploaded_files:
         with st.spinner("Criando base de conhecimento..."):
             try:
                 # Create dataset
-                dataset_id = dify_client.create_dataset(name=dataset_name)
+                dataset_id = dify_client.create_dataset(name=f"{dataset_name}")
 
                 # Upload files
                 for uploaded_file in uploaded_files:

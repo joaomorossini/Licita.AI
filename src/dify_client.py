@@ -121,6 +121,7 @@ class DifyClient:
         if "files" in kwargs:
             logger.info("Files included in request")
 
+    # TODO: Add new parameter 'prefix' to create_dataset method
     def create_dataset(self, name: str) -> str:
         """Create a new dataset in Dify with optimized settings.
 
